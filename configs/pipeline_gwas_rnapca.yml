@@ -1,0 +1,45 @@
+pipeline:
+  Standadization:
+    - "local_load_expression"
+    - "local_col_nansum"
+    - "global_mean"
+    - "local_ssq"
+    - "global_var"
+    - "local_standardize"
+  RandomizedSVD:
+    - "local_init"
+    - "global_init"
+    - "update_local_U"
+    - "update_global_U"
+    - "check_convergence"
+    - "update_global_Us"
+    - "update_local_V"
+    - "decompose_global_Us"
+    - "compute_local_covariance"
+    - "decompose_global_covariance"
+    - "recontruct_local_V"
+  GramSchmidt:
+    - "local_make_V_as_M"
+    - "local_first_norm"
+    - "global_first_norm"
+    - "local_residuals"
+    - "global_residuals"
+    - "local_nth_norm"
+    - "global_nth_norm"
+    - "local_normalization"
+    - "local_make_M_as_V"
+  RandomizedSVD:
+    - "update_local_U"
+    - "update_global_U"
+  Output:
+    - "rna_pca_results"
+
+
+config:
+  expression_data_path: "data/whole/TARGET-NBL (symbol format).csv"
+  pc_save_dir: "/tmp/pca"
+  k1: 20
+  k2: 20
+  max_iterations: 20
+  epsilon: 1.e-9
+  log_path: "rna.log"

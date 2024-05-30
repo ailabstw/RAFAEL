@@ -1,0 +1,23 @@
+config:
+  node_id: 3
+
+  bfile_path: "data/whole/hapmap1_100"
+  pheno_name: "pheno"
+  cov_path: "data/whole/hapmap1_100.cov"
+  regression_save_dir: "/tmp/client2/glm"
+  qc_output_path: "/tmp/client2"
+  impute_cov: False
+
+  mind: 0.05
+  block_size: 50
+  num_core: 2
+
+dataloader:
+  QuantitativeGWAS:
+    style: "snp"
+    snp_chunk_size: 50
+
+servers:
+  - node_id: 1
+    host: "localhost"
+    port: 8000

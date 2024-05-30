@@ -1,0 +1,68 @@
+[build-system]
+requires = ["poetry-core", "setuptools>=61.0", "setuptools-cpp"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "rafael"
+version = "0.0.0"
+description = "A federated analysis framework for bioinformatics analysis"
+readme = "README.md"
+
+authors = [
+    "Jian-Hung Wen <jianhung.wen@ailabs.tw>",
+    "Yueh-Hua Tu <yuehhua.tu@ailabs.tw>",
+    "Yi-Lun Lee <yilun.lee@ailabs.tw>"
+]
+
+classifiers = [
+   "Programming Language :: Python :: 3",
+   "Operating System :: OS Independent",
+]
+
+include = ["rafael/fedalgo/externals"]
+
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = true
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+numpy = {version = "~1", python = ">=3.9,<3.12"}
+jax = "~0.4"
+jaxlib = "^0.4"
+ruamel-yaml = "~0.18"
+tqdm = "*"
+pydantic = "~2"
+aiohttp = "~3"
+lifelines = "*"
+seaborn = "*"
+fastapi = "*"
+plotnine = "0.13.4"
+polars = "0.20.20"
+pyarrow = "*"
+uvicorn = {extras = ["standard"], version = "*"}
+scipy = {version = "~1", python = ">=3.9,<3.12"}
+pooch = "~1"
+bed_reader = "*"
+pandas = "^2"
+ordered_set = "~4"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4"
+
+[tool.poetry.group.doc.dependencies]
+sphinx = "^6.2"
+myst-parser = "^2.0"
+
+[tool.poetry.group.packaging.dependencies]
+build = "~1"
+
+[tool.poetry.group.publishing.dependencies]
+twine = "~4"
+
+[tool.poetry.group.benchmark.dependencies]
+pyperf = "^2"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "default"

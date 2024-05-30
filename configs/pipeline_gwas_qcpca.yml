@@ -1,0 +1,62 @@
+pipeline:
+  BasicBfileQC:
+    - "local_get_metadata"
+    - "global_match_snps"
+    - "local_qc_stats"
+    - "global_qc_stats"
+    - "local_filter_bfile"
+  Standadization:
+    - "local_load_gwasdata"
+    - "local_col_nansum"
+    - "global_mean"
+    - "local_imputed_mean"
+    - "local_ssq"
+    - "global_var"
+    - "local_standardize"
+  RandomizedSVD:
+    - "local_init"
+    - "global_init"
+    - "update_local_U"
+    - "update_global_U"
+    - "check_convergence"
+    - "update_global_Us"
+    - "update_local_V"
+    - "decompose_global_Us"
+    - "compute_local_covariance"
+    - "decompose_global_covariance"
+    - "recontruct_local_V"
+  GramSchmidt:
+    - "local_make_V_as_M"
+    - "local_first_norm"
+    - "global_first_norm"
+    - "local_residuals"
+    - "global_residuals"
+    - "local_nth_norm"
+    - "global_nth_norm"
+    - "local_normalization"
+    - "local_make_M_as_V"
+  RandomizedSVD:
+    - "update_local_U"
+    - "update_global_U"
+  Output:
+    - "pca_results"
+
+
+config:
+  log_path: "pipeline_gwas_qcpca.log"
+  bfile_path: "data/whole/hapmap1_100"
+  pheno_name: "pheno"
+  cov_path: "data/whole/hapmap1_100.cov"
+  impute_cov: False
+  qc_output_path: "/tmp/agg"
+  pc_save_dir: "/tmp/pca"
+  batch_size: 51
+  num_core: 2
+  maf: 0.05
+  geno: 0.05
+  mind: 0.05
+  hwe: 5.e-7
+  k1: 20
+  k2: 20
+  max_iterations: 20
+  epsilon: 1.e-9

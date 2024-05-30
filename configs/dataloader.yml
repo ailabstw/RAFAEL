@@ -1,0 +1,41 @@
+pipeline:
+  BasicBfileQC:
+    - "local_get_metadata"
+    - "global_match_snps"
+    - "local_qc_stats"
+    - "global_qc_stats"
+    - "local_filter_bfile"
+  QuantitativeGWAS:
+    - "local_load_gwasdata"
+    - "local_calculate_covariances"
+    - "global_fit_model"
+    - "local_sse_and_obs"
+    - "global_stats"
+
+dataloader:
+  loader:
+    style: "snp"
+    start_idx: 0
+    end_idx: 1
+  loader2:
+    bfile_arg: "filtered_bfile_path"
+    cov_arg: "filtered_cov_path"
+    style: "snp"
+    sample_chunk_size: 
+    snp_chunk_size: 10
+    start_idx: 1
+    end_idx: 2
+
+config:
+  bfile_path: "data/whole/hapmap1_100"
+  pheno_name: "pheno"
+  cov_path: "data/whole/hapmap1_100.cov"
+  impute_cov: False
+  qc_output_path: "/tmp/agg"
+  block_size: 51
+  num_core: 2
+  maf: 0.05
+  geno: 0.05
+  mind: 0.05
+  hwe: 5.e-7
+  

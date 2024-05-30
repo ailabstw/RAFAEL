@@ -1,0 +1,12 @@
+config:
+  bfile_path: "/volume/gwasfl/SCENARIOS_qc/I/QUANT/agg"
+  pheno_name: "pheno"
+  cov_path: "/volume/gwasfl/SCENARIOS_qc/I/QUANT/agg.cov"
+  qc_output_path: "/tmp/agg"
+  regression_save_dir: "/tmp/agg/glm"
+  block_size: 10000
+  num_core: 4
+  maf: 0.05
+  geno: 0.02
+  mind: 0.02
+  hwe: 5.e-7

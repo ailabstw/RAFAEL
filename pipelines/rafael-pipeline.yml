@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: rafael-pipeline
+spec:
+  containers:
+  - name: rafael-pipeline
+    image: 'python:3.11'
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 8000
+    resources:
+      limits:
+        cpu: "8"
+        memory: "64G"
+      requests:
+        cpu: "4"
+    command: ["/bin/sh", "-c"]
+    args:
+      - apt-get update &&
+        apt-get install -y git &&
+        sleep infinity
+    securityContext:
+      allowPrivilegeEscalation: false
+    volumeMounts:
+      - name: gwasfl
+        mountPath: /volume/gwasfl
+
+  volumes:
+    - name: gwasfl
+      persistentVolumeClaim:
+        claimName: jianhung-fa

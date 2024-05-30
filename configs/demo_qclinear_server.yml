@@ -1,0 +1,13 @@
+config:
+  node_id: 1
+  timeout: 5
+
+  qc_output_path: "/tmp/agg"
+
+  maf: 0.05
+  geno: 0.05
+  hwe: 5.e-7
+
+clients:
+  - node_id: 2
+  - node_id: 3

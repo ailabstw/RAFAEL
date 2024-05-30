@@ -1,0 +1,32 @@
+pipeline:
+  BasicBfileQC:
+    - "local_get_metadata"
+    - "global_match_snps"
+    - "local_qc_stats"
+    - "global_qc_stats"
+    - "local_filter_bfile"
+  BinaryGWAS:
+    - "local_load_gwasdata"
+    - "local_init_params"
+    - "global_params"
+    - "local_iter_params"
+    - "global_stats"
+  Output:
+    - "regression_results"
+
+config:
+  log_path: "pipeline_gwas_qclogistic.log"
+  bfile_path: "data/whole/hapmap1_100"
+  pheno_path: "data/whole/hapmap1_100.pheno"
+  pheno_name: "pheno"
+  cov_path: "data/whole/hapmap1_100.cov"
+  impute_cov: False
+  qc_output_path: "/tmp/agg"
+  regression_save_dir: "/tmp/glm"
+  num_core: 2
+  maf: 0.05
+  geno: 0.05
+  mind: 0.05
+  hwe: 5.e-7
+  max_iterations: 16
+  epsilon: 1.e-9

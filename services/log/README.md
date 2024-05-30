@@ -1,0 +1,1 @@
+## This directory is used to store the logs for each service (optional, depending on the env variables in Dockerfile)
