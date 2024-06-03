@@ -190,6 +190,8 @@ def filter_snp(
     obs_summary.loc[geno_filter & hwe_filter & maf_filter, "PASS"] = True
     snp_id = obs_summary[obs_summary.PASS].ID.values
 
+    dir_path = os.path.dirname(save_path)
+    os.makedirs(dir_path, exist_ok=True)
     obs_summary.to_csv(f"{save_path}", index=False)
 
     return snp_id
