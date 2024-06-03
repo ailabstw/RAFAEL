@@ -65,4 +65,4 @@ pyperf = "^2"
 
 [[tool.poetry.source]]
 name = "PyPI"
-priority = "default"
+priority = "primary"
