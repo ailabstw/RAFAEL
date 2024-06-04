@@ -63,24 +63,25 @@ class BasicBfileQC(UseCase):
 
         Parameters
         ----------
-            bfile_path : str
-                The path to the bfile.
-            cov_path : str
-                The path to the covariate file.
-            pheno_path : str
-                The path to the phenotype file.
-            pheno_name : str
-                The column name of the phenotype.
-            **kwargs : dict, optional
-                Additional arguments for the GWASData.custom method.
+        bfile_path : str
+            The path to the bfile.
+        cov_path : str
+            The path to the covariate file.
+        pheno_path : str
+            The path to the phenotype file.
+        pheno_name : str
+            The column name of the phenotype.
+        **kwargs : dict, optional
+            Additional arguments for the GWASData.custom method.
+
         Returns
         -------
-            autosome_snp_list : list
-                The list of snp ids (format: CHR:POS:A1:A2).
-            sample_list : list
-                The list of sample ids. See GWASData.drop_missing_samples.
-            autosome_snp_table : dict
-                The dictionary mapping snp id (format: CHR:POS:A1:A2) to rsID.
+        autosome_snp_list : list
+            The list of snp ids (format: CHR:POS:A1:A2).
+        sample_list : list
+            The list of sample ids. See GWASData.drop_missing_samples.
+        autosome_snp_table : dict
+            The dictionary mapping snp id (format: CHR:POS:A1:A2) to rsID.
         """
         autosome_snp_list, sample_list, autosome_snp_table = gwasprs.get_qc_metadata(
             bfile_path,
@@ -97,12 +98,13 @@ class BasicBfileQC(UseCase):
 
         Parameters
         ----------
-            autosome_snp_list : list of list
-                The lists of snp ids (format: CHR:POS:A1:A2) from edges.
+        autosome_snp_list : list of list
+            The lists of snp ids (format: CHR:POS:A1:A2) from edges.
+
         Returns
         -------
-            autosome_snp_list : list
-                The list of snp ids shared among all edges.
+        autosome_snp_list : list
+            The list of snp ids shared among all edges.
         """
         if isinstance(autosome_snp_list, list) and isinstance(
             autosome_snp_list[0], list
@@ -119,19 +121,21 @@ class BasicBfileQC(UseCase):
 
         Parameters
         ----------
-            autosome_snp_list : list
-                The list of shared snp ids (format: CHR:POS:A1:A2) among all edges.
-            qc_output_path : str
-                The path to the output file for the QC report.
-            autosome_snp_table : dict
-                The dictionary mapping snp id (format: CHR:POS:A1:A2) to rsID.
-            bfile_path : str
-                The path to the bfile for the QC.
-        Returns:
-            allele_count : np.array
-                The array (n_SNP, 3) storing allele counts for each snp.
-            n_obs : int
-                The number of samples in the edge.
+        autosome_snp_list : list
+            The list of shared snp ids (format: CHR:POS:A1:A2) among all edges.
+        qc_output_path : str
+            The path to the output file for the QC report.
+        autosome_snp_table : dict
+            The dictionary mapping snp id (format: CHR:POS:A1:A2) to rsID.
+        bfile_path : str
+            The path to the bfile for the QC.
+
+        Returns
+        -------
+        allele_count : np.array
+            The array (n_SNP, 3) storing allele counts for each snp.
+        n_obs : int
+            The number of samples in the edge.
         """
         autosome_rsID_list = list(
             map(lambda id: autosome_snp_table[id], autosome_snp_list)
@@ -149,27 +153,28 @@ class BasicBfileQC(UseCase):
 
         Parameters
         ----------
-            allele_count : list of np.array
-                Allele counts for each snp in shape (n_edge, n_SNP, 3).
-            n_obs : list of int
-                The numbers of samples from edges.
-            autosome_snp_list : list
-                The list of shared snp ids among all edges.
-            qc_output_output : str
-                The path to the output file for the QC report.
-            geno : float
-                Filters out all SNPs with
-                missing call rates exceeding the provided value.
-            hwe : float
-                Filters out all SNPs having Hardy-Weinberg equilibrium test
-                p-value below the provided threshold.
-            maf : float
-                Filters out all variants with
-                minor allele frequency below the provided threshold.
+        allele_count : list of np.array
+            Allele counts for each snp in shape (n_edge, n_SNP, 3).
+        n_obs : list of int
+            The numbers of samples from edges.
+        autosome_snp_list : list
+            The list of shared snp ids among all edges.
+        qc_output_output : str
+            The path to the output file for the QC report.
+        geno : float
+            Filters out all SNPs with
+            missing call rates exceeding the provided value.
+        hwe : float
+            Filters out all SNPs having Hardy-Weinberg equilibrium test
+            p-value below the provided threshold.
+        maf : float
+            Filters out all variants with
+            minor allele frequency below the provided threshold.
+
         Returns
         -------
-            filtered_autosome_snp_list : list
-                The list of snp ids (format: CHR:POS:A1:A2) passing the QC.
+        filtered_autosome_snp_list : list
+            The list of snp ids (format: CHR:POS:A1:A2) passing the QC.
         """
         if isinstance(allele_count, (list, tuple)):
             allele_count = gwasprs.aggregations.SumUp()(*allele_count)
@@ -197,25 +202,26 @@ class BasicBfileQC(UseCase):
 
         Parameters
         ----------
-            filtered_autosome_snp_list : list
-                The list of snp ids (format: CHR:POS:A1:A2) passing the QC.
-            qc_output_output : str
-                The path to the output file for the QC report.
-            sample_list : list
-                The list of sample ids. See GWASData.drop_missing_samples.
-            autosome_snp_table : dict
-                The dictionary mapping snp id (format: CHR:POS:A1:A2) to rsID.
-            bfile_path : str
-                The path to the bfile.
-            mind : float
-                Filters out all samples with
-                missing call rates exceeding the provided value.
+        filtered_autosome_snp_list : list
+            The list of snp ids (format: CHR:POS:A1:A2) passing the QC.
+        qc_output_output : str
+            The path to the output file for the QC report.
+        sample_list : list
+            The list of sample ids. See GWASData.drop_missing_samples.
+        autosome_snp_table : dict
+            The dictionary mapping snp id (format: CHR:POS:A1:A2) to rsID.
+        bfile_path : str
+            The path to the bfile.
+        mind : float
+            Filters out all samples with
+            missing call rates exceeding the provided value.
+
         Returns
         -------
-            filtered_bfile_path : str
-                The path to the filtered bfile.
-            filtered_cov_path : str
-                The path to the filtered covariate file.
+        filtered_bfile_path : str
+            The path to the filtered bfile.
+        filtered_cov_path : str
+            The path to the filtered covariate file.
         """
         autosome_rsID_list = list(
             map(lambda id: autosome_snp_table[id], filtered_autosome_snp_list)
@@ -254,23 +260,23 @@ class CovarProcessor(UseCase):
         
         Parameters
         ----------
-            bfile_path : str
-                The path to the bfile.
-            cov_path : str
-                The path to the covariate file.
-            pheno_path : str
-                The path to the phenotype file.
-            pheno_name : str
-                The column name of the phenotype.
+        bfile_path : str
+            The path to the bfile.
+        cov_path : str
+            The path to the covariate file.
+        pheno_path : str
+            The path to the phenotype file.
+        pheno_name : str
+            The column name of the phenotype.
         
         Returns
         -------
-            covariates : np.array
-                The covariate matrix.
-            covar_names : list
-                The names of the covariates.
-            sample_ids : pd.DataFrame
-                The pandas DataFrame contains two columns, FID and IID.
+        covariates : np.array
+            The covariate matrix.
+        covar_names : list
+            The names of the covariates.
+        sample_ids : pd.DataFrame
+            The pandas DataFrame contains two columns, FID and IID.
         """
         if cov_path is None:
             return None, None, None
@@ -300,25 +306,25 @@ class CovarProcessor(UseCase):
         
         Parameters
         ----------
-            cov_path : str
-                The path to the covariate file.
-            covar_matrix : np.array
-                The standardized covariates.
-            covar_names : list
-                The names of the covariates.
-            cov_sample_ids : pd.DataFrame
-                The pandas DataFrame contains two columns, FID and IID.
-            pc_path : str
-                The path to the pc file.
-            pc_sample_ids : pd.DataFrame
-                The pandas DataFrame contains two columns, FID and IID.
-            save_dir : str
-                The path to save updated covariates.
+        cov_path : str
+            The path to the covariate file.
+        covar_matrix : np.array
+            The standardized covariates.
+        covar_names : list
+            The names of the covariates.
+        cov_sample_ids : pd.DataFrame
+            The pandas DataFrame contains two columns, FID and IID.
+        pc_path : str
+            The path to the pc file.
+        pc_sample_ids : pd.DataFrame
+            The pandas DataFrame contains two columns, FID and IID.
+        save_dir : str
+            The path to save updated covariates.
         
         Returns
         -------
-            cov_path : str
-                The path to the updated covariate file.
+        cov_path : str
+            The path to the updated covariate file.
                 
         Notes
         -----
@@ -439,29 +445,33 @@ class QuantitativeGWAS(UseCase):
 
         Parameters
         ----------
-            filtered_bfile_path : str
-                The path to the bfile.
-            filtered_cov_path : str
-                The path to the covariate file.
-            pheno_path : str
-                The path to the phenotype file.
-            pheno_name : str
-                The column name of the phenotype.
-            **kwargs : dict, optional
-                Additional arguments for the GWASData.custom method.
+        filtered_bfile_path : str
+            The path to the bfile.
+        filtered_cov_path : str
+            The path to the covariate file.
+        pheno_path : str
+            The path to the phenotype file.
+        pheno_name : str
+            The column name of the phenotype.
+        **kwargs : dict, optional
+            Additional arguments for the GWASData.custom method.
+
         Returns
         -------
-            genotype : np.array
-                Genotype matrix in shape (n_sample, n_SNP).
-            covariates : np.array
-                Covariate matrix in shape (n_sample, n_covariate).
-            phenotype : np.array
-                Phenotype vector in shape (n_sample,).
+        genotype : np.array
+            Genotype matrix in shape (n_sample, n_SNP).
+        covariates : np.array
+            Covariate matrix in shape (n_sample, n_covariate).
+        phenotype : np.array
+            Phenotype vector in shape (n_sample,).
+
         See also
         --------
-        GWASData.subset
-        GWASData.impute_covariates
-        GWASData.add_unique_snp_id
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.subset`
+
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.impute_covariates`
+
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.add_unique_snp_id`  
         """
         logging.info("Loading bed file.")
         data = gwasprs.GWASData.read(
@@ -508,23 +518,24 @@ class QuantitativeGWAS(UseCase):
 
         Parameters
         ----------
-            genotype : np.array
-                Genotype matrix in shape (n_sample, n_SNP).
-            covariates : np.array
-                Covariate matrix in shape (n_sample, n_covariate).
-            phenotype : np.array
-                Phenotype vector in shape (n_sample,).
-            block_size : int
-                Number of SNPs to run in a block in a process.
-            nprocess : int
-                Number of processes to run the task.
+        genotype : np.array
+            Genotype matrix in shape (n_sample, n_SNP).
+        covariates : np.array
+            Covariate matrix in shape (n_sample, n_covariate).
+        phenotype : np.array
+            Phenotype vector in shape (n_sample,).
+        block_size : int
+            Number of SNPs to run in a block in a process.
+        nprocess : int
+            Number of processes to run the task.
+
         Returns
         -------
-            XtX : np.array
-                Block diagonal covariance matrix
-                in shape (n_SNP*(n_covariate+2), n_SNP*(n_covariate+2)).
-            Xty : np.array
-                Vector in shape (n_SNP*(n_covariate+2), 1).
+        XtX : np.array
+            Block diagonal covariance matrix
+            in shape (n_SNP*(n_covariate+2), n_SNP*(n_covariate+2)).
+        Xty : np.array
+            Vector in shape (n_SNP*(n_covariate+2), 1).
         """
         logging.info("Calculating (auto)covariance matrix.")
         n_SNP = genotype.shape[1]
@@ -552,15 +563,16 @@ class QuantitativeGWAS(UseCase):
 
         Parameters
         ----------
-            XtX : list of np.array
-                Block diagonal covariance matrix in shape
-                (n_SNP*(n_covariate+2), n_SNP*(n_covariate+2)) from edges.
-            Xty : list of np.array
-                Vector in shape (n_SNP*(n_covariate+2), 1) from edges.
+        XtX : list of np.array
+            Block diagonal covariance matrix in shape
+            (n_SNP*(n_covariate+2), n_SNP*(n_covariate+2)) from edges.
+        Xty : list of np.array
+            Vector in shape (n_SNP*(n_covariate+2), 1) from edges.
+
         Returns
         -------
-            beta : np.array
-                Coefficients in shape (n_SNP*(n_covariate+2), 1).
+        beta : np.array
+            Coefficients in shape (n_SNP*(n_covariate+2), 1).
         """
         logging.info("Fitting linear regression model.")
         if isinstance(XtX, list) and isinstance(Xty, list):
@@ -585,20 +597,21 @@ class QuantitativeGWAS(UseCase):
 
         Parameters
         ----------
-            beta : np.array
-                Coefficients in shape (n_SNP*(n_covariate+2), 1).
-            phenotype : np.array
-                Phenotype vector in shape (n_sample,).
-            genotype : np.array
-                Genotype matrix in shape (n_sample, n_SNP).
-            covariates : np.array
-                Covariate matrix in shape (n_sample, n_covariate).
+        beta : np.array
+            Coefficients in shape (n_SNP*(n_covariate+2), 1).
+        phenotype : np.array
+            Phenotype vector in shape (n_sample,).
+        genotype : np.array
+            Genotype matrix in shape (n_sample, n_SNP).
+        covariates : np.array
+            Covariate matrix in shape (n_sample, n_covariate).
+
         Returns
         -------
-            sse : np.array
-                Sum of square error in shape (n_SNP*(n_covariate+2),).
-            n_obs : np.array
-                Number of observations in shape (n_SNP,).
+        sse : np.array
+            Sum of square error in shape (n_SNP*(n_covariate+2),).
+        n_obs : np.array
+            Number of observations in shape (n_SNP,).
         """
         logging.info("Calculating SSE and number of observations.")
         n_SNP = genotype.shape[1]
@@ -633,16 +646,17 @@ class QuantitativeGWAS(UseCase):
 
         Parameters
         ----------
-            sse : list of np.array
-                Sum of square error in shape (n_SNP*(n_covariate+2),).
-            n_obs : list of np.array
-                Number of observations in shape (n_SNP,).
+        sse : list of np.array
+            Sum of square error in shape (n_SNP*(n_covariate+2),).
+        n_obs : list of np.array
+            Number of observations in shape (n_SNP,).
+
         Returns
         -------
-            t_stat : np.array
-                t-statistics in shape (n_SNP, n_covariate+2).
-            pval : np.array
-                p-values in shape (n_SNP, n_covariate+2).
+        t_stat : np.array
+            t-statistics in shape (n_SNP, n_covariate+2).
+        pval : np.array
+            p-values in shape (n_SNP, n_covariate+2).
         """
         logging.info("Calculating t statistics.")
         if isinstance(sse, list) and isinstance(n_obs, list):
@@ -687,16 +701,17 @@ class LinearRegression(UseCase):
 
         Parameters
         ----------
-            X : np.array
-                The feature matrix with shape (n_samples, n_features).
-            y : np.array
-                The target vector with shape (n_samples,)
+        X : np.array
+            The feature matrix with shape (n_samples, n_features).
+        y : np.array
+            The target vector with shape (n_samples,)
+
         Returns
         -------
-            XtX : np.array
-                The covariance matrix with shape (n_features+1, n_features+1).
-            Xty : np.array
-                The dot product of feature matrix and target vector with shape (n_features+1,).
+        XtX : np.array
+            The covariance matrix with shape (n_features+1, n_features+1).
+        Xty : np.array
+            The dot product of feature matrix and target vector with shape (n_features+1,).
         """
         assert not np.any(np.isnan(X)), "Feature matrix contains NaN values."
         assert not np.any(np.isnan(y)), "Target array contains NaN values."
@@ -711,14 +726,15 @@ class LinearRegression(UseCase):
 
         Parameters
         ----------
-            XtX : list of np.array
-                The covariance matrix with shape (n_features+1, n_features+1).
-            Xty : np.array
-                The dot product of feature matrix and target vector with shape (n_features+1,).
+        XtX : list of np.array
+            The covariance matrix with shape (n_features+1, n_features+1).
+        Xty : np.array
+            The dot product of feature matrix and target vector with shape (n_features+1,).
+
         Returns
         -------
-            beta : np.array
-                Coefficients of the linear regression with shape (n_features+1,).
+        beta : np.array
+            Coefficients of the linear regression with shape (n_features+1,).
         """
         if isinstance(XtX, list) and isinstance(Xty, list):
             XtX = gwasprs.aggregations.SumUp()(*XtX)
@@ -735,18 +751,19 @@ class LinearRegression(UseCase):
 
         Parameters
         ----------
-            X : np.array
-                The feature matrix with shape (n_samples, n_features+1).
-            y : np.array
-                The target vector with shape (n_samples,)
-            beta : np.array
-                Coefficients of the linear regression with shape (n_features+1,).
+        X : np.array
+            The feature matrix with shape (n_samples, n_features+1).
+        y : np.array
+            The target vector with shape (n_samples,)
+        beta : np.array
+            Coefficients of the linear regression with shape (n_features+1,).
+
         Returns
         -------
-            sse : np.array
-                Sum of square error in shape (n_features+1,).
-            n_obs : int
-                Number of observations.
+        sse : np.array
+            Sum of square error in shape (n_features+1,).
+        n_obs : int
+            Number of observations.
         """
         client_model = gwasprs.regression.LinearRegression(beta=beta)
         sse = client_model.sse(X, y)
@@ -759,16 +776,17 @@ class LinearRegression(UseCase):
 
         Parameters
         ----------
-            sse : list of np.array
-                Sum of square error in shape (n_features+1,).
-            n_obs : list of int
-                Number of observations.
+        sse : list of np.array
+            Sum of square error in shape (n_features+1,).
+        n_obs : list of int
+            Number of observations.
+
         Returns
         -------
-            t_stat : np.array
-                t-statistics in shape (n_features+1,).
-            pval : np.array
-                p-values in shape (n_features+1,).
+        t_stat : np.array
+            t-statistics in shape (n_features+1,).
+        pval : np.array
+            p-values in shape (n_features+1,).
         """
         if isinstance(sse, list) and isinstance(n_obs, list):
             sse = gwasprs.aggregations.SumUp()(*sse)
@@ -861,29 +879,33 @@ class BinaryGWAS(UseCase):
 
         Parameters
         ----------
-            filtered_bfile_path : str
-                The path to the bfile.
-            filtered_cov_path : str
-                The path to the covariate file.
-            pheno_path : str
-                The path to the phenotype file.
-            pheno_name : str
-                The column name of the phenotype.
-            **kwargs : dict, optional
-                Additional arguments for the GWASData.custom method.
+        filtered_bfile_path : str
+            The path to the bfile.
+        filtered_cov_path : str
+            The path to the covariate file.
+        pheno_path : str
+            The path to the phenotype file.
+        pheno_name : str
+            The column name of the phenotype.
+        **kwargs : dict, optional
+            Additional arguments for the GWASData.custom method.
+
         Returns
         -------
-            genotype : np.array
-                Genotype matrix in shape (n_sample, n_SNP).
-            covariates : np.array
-                Covariate matrix in shape (n_sample, n_covariate).
-            phenotype : np.array
-                Phenotype vector in shape (n_sample,).
+        genotype : np.array
+            Genotype matrix in shape (n_sample, n_SNP).
+        covariates : np.array
+            Covariate matrix in shape (n_sample, n_covariate).
+        phenotype : np.array
+            Phenotype vector in shape (n_sample,).
+
         See also
         --------
-        GWASData.subset
-        GWASData.impute_covariates
-        GWASData.add_unique_snp_id
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.subset`
+
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.impute_covariates`
+
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.add_unique_snp_id`
         """
         logging.info("Loading bed file.")
         data = gwasprs.GWASData.read(
@@ -925,24 +947,25 @@ class BinaryGWAS(UseCase):
 
         Parameters
         ----------
-            genotype : np.array
-                Genotype matrix in shape (n_sample, n_SNP).
-            covariates : np.array
-                Covariate matrix in shape (n_sample, n_covariate).
-            phenotype : np.array
-                Phenotype vector in shape (n_sample,).
+        genotype : np.array
+            Genotype matrix in shape (n_sample, n_SNP).
+        covariates : np.array
+            Covariate matrix in shape (n_sample, n_covariate).
+        phenotype : np.array
+            Phenotype vector in shape (n_sample,).
+
         Returns
         -------
-            n_obs : np.array
-                Number of observations in shape (n_SNP,).
-            gradient : np.array
-                Gradient matrix in shape (n_SNP, n_covariate+2).
-            hessian : np.array
-                Hessian matrix in shape (n_SNP, n_covariate+2, n_covariate+2).
-            loglikelihood : np.array
-                Loglikelihood vector in shape (n_SNP,).
-            current_iteration : int
-                Current iteration, starts from 1.
+        n_obs : np.array
+            Number of observations in shape (n_SNP,).
+        gradient : np.array
+            Gradient matrix in shape (n_SNP, n_covariate+2).
+        hessian : np.array
+            Hessian matrix in shape (n_SNP, n_covariate+2, n_covariate+2).
+        loglikelihood : np.array
+            Loglikelihood vector in shape (n_SNP,).
+        current_iteration : int
+            Current iteration, starts from 1.
         """
         # Initialize
         if covariates is None:
@@ -977,35 +1000,36 @@ class BinaryGWAS(UseCase):
 
         Parameters
         ----------
-            gradient : np.array
-                Gradient matrix in shape (n_SNP, n_covariate+2) from edges.
-            hessian : np.array
-                Hessian matrix in shape (n_SNP, n_covariate+2, n_covariate+2) from edges.
-            loglikelihood : np.array
-                Loglikelihood vector in shape (n_SNP,) from edges.
-            current_iteration : int
-                Current iteration, starts from 1.
-            max_iterations : int
-                Maximum number of iterations.
-            prev_loglikelihood : np.array
-                Previous loglikelihood vector in shape (n_SNP,).
-            prev_beta : np.array
-                Previous beta vector in shape (n_SNP, n_covariate+2).
+        gradient : np.array
+            Gradient matrix in shape (n_SNP, n_covariate+2) from edges.
+        hessian : np.array
+            Hessian matrix in shape (n_SNP, n_covariate+2, n_covariate+2) from edges.
+        loglikelihood : np.array
+            Loglikelihood vector in shape (n_SNP,) from edges.
+        current_iteration : int
+            Current iteration, starts from 1.
+        max_iterations : int
+            Maximum number of iterations.
+        prev_loglikelihood : np.array
+            Previous loglikelihood vector in shape (n_SNP,).
+        prev_beta : np.array
+            Previous beta vector in shape (n_SNP, n_covariate+2).
+
         Returns
         -------
-            beta : np.array
-                Updated beta vector in shape (n_SNP, n_covariate+2).
-            prev_beta : np.array
-                Updated beta vector in shape (n_SNP, n_covariate+2).
-            prev_loglikelihood : np.array
-                Updated loglikelihood vector in shape (n_SNP,).
-            inv_hessian : np.array
-                If meeting the termination criterion,
-                the inverse hessian (n_SNP, n_covariate+2, n_covariate+2).
-                Otherwise, None.
-            jump_to : str
-                If meeting the termination criterion, 'global_stats'.
-                Otherwise, 'local_iter_params'.
+        beta : np.array
+            Updated beta vector in shape (n_SNP, n_covariate+2).
+        prev_beta : np.array
+            Updated beta vector in shape (n_SNP, n_covariate+2).
+        prev_loglikelihood : np.array
+            Updated loglikelihood vector in shape (n_SNP,).
+        inv_hessian : np.array
+            If meeting the termination criterion,
+            the inverse hessian (n_SNP, n_covariate+2, n_covariate+2).
+            Otherwise, None.
+        jump_to : str
+            If meeting the termination criterion, 'global_stats'.
+            Otherwise, 'local_iter_params'.
         """
         # Make sure the input parameters have the edge axis
         if len(jnp.array(gradient).shape) != 3:
@@ -1050,28 +1074,29 @@ class BinaryGWAS(UseCase):
 
         Parameters
         ----------
-            genotype : np.array
-                Genotype matrix in shape (n_sample, n_SNP).
-            covariates : np.array
-                Covariate matrix in shape (n_sample, n_covariate).
-            phenotype : np.array
-                Phenotype vector in shape (n_sample,).
-            beta : np.array
-                Global beta matrix in shape (n_SNP, n_covariate+2).
-            current_iteration : int
-                Current iteration.
+        genotype : np.array
+            Genotype matrix in shape (n_sample, n_SNP).
+        covariates : np.array
+            Covariate matrix in shape (n_sample, n_covariate).
+        phenotype : np.array
+            Phenotype vector in shape (n_sample,).
+        beta : np.array
+            Global beta matrix in shape (n_SNP, n_covariate+2).
+        current_iteration : int
+            Current iteration.
+
         Returns
         -------
-            gradient : np.array
-                Gradient matrix in shape (n_SNP, n_covariate+2).
-            hessian : np.array
-                Hessian matrix in shape (n_SNP, n_covariate+2, n_covariate+2).
-            loglikelihood : np.array
-                Loglikelihood vector in shape (n_SNP,).
-            current_iteration : int
-                Updated current iteration.
-            jump_to : str
-                'global_params' to update global parameters.
+        gradient : np.array
+            Gradient matrix in shape (n_SNP, n_covariate+2).
+        hessian : np.array
+            Hessian matrix in shape (n_SNP, n_covariate+2, n_covariate+2).
+        loglikelihood : np.array
+            Loglikelihood vector in shape (n_SNP,).
+        current_iteration : int
+            Updated current iteration.
+        jump_to : str
+            'global_params' to update global parameters.
         """
         if covariates is None:
             covariates = jnp.ones((genotype.shape[0], 1))
@@ -1094,18 +1119,19 @@ class BinaryGWAS(UseCase):
 
         Parameters
         ----------
-            beta : np.array
-                Global beta matrix in shape (n_SNP, n_covariate+2).
-            inv_hessian : np.array
-                Inverse hessian (n_SNP, n_covariate+2, n_covariate+2).
+        beta : np.array
+            Global beta matrix in shape (n_SNP, n_covariate+2).
+        inv_hessian : np.array
+            Inverse hessian (n_SNP, n_covariate+2, n_covariate+2).
+
         Returns
         -------
-            t_stat : np.array
-                T-statistic vector in shape (n_SNP,).
-            pval : np.array
-                P-value vector in shape (n_SNP,).
-            beta : np.array
-                Global beta vector in shape (n_SNP,).
+        t_stat : np.array
+            T-statistic vector in shape (n_SNP,).
+        pval : np.array
+            P-value vector in shape (n_SNP,).
+        beta : np.array
+            Global beta vector in shape (n_SNP,).
         """
         beta = beta.astype('float64')
         inv_hessian = inv_hessian.astype('float64')
@@ -1165,24 +1191,25 @@ class LogisticRegression(UseCase):
 
         Parameters
         ----------
-            X : np.array
-                The feature matrix with shape (n_samples, n_features).
-            y : np.array
-                The target vector with shape (n_samples,)
+        X : np.array
+            The feature matrix with shape (n_samples, n_features).
+        y : np.array
+            The target vector with shape (n_samples,)
+
         Returns
         -------
-            X : np.array
-                X matrix in shape (n_samples, n_features+1).
-            y : np.array
-                Vector in shape (n_samples,).
-            gradient : np.array
-                Gradient vector in shape (n_features+1,).
-            hessian : np.array
-                Hessian matrix in shape (n_features+1, n_features+1).
-            loglikelihood : float
-                Loglikelihood.
-            current_iteration : int
-                Current iteration, starts from 1.
+        X : np.array
+            X matrix in shape (n_samples, n_features+1).
+        y : np.array
+            Vector in shape (n_samples,).
+        gradient : np.array
+            Gradient vector in shape (n_features+1,).
+        hessian : np.array
+            Hessian matrix in shape (n_features+1, n_features+1).
+        loglikelihood : float
+            Loglikelihood.
+        current_iteration : int
+            Current iteration, starts from 1.
         """
         assert not np.any(np.isnan(X)), "Feature matrix contains NaN values."
 
@@ -1224,35 +1251,36 @@ class LogisticRegression(UseCase):
 
         Parameters
         ----------
-            gradient : list of np.array
-                Gradient vector in shape (n_features+1,).
-            hessian : list of np.array
-                Hessian matrix in shape (n_features+1, n_features+1).
-            loglikelihood : list of float
-                Loglikelihood.
-            current_iteration : int
-                Current iteration, starts from 1.
-            max_iterations : int
-                Maximum number of iterations.
-            prev_loglikelihood : float
-                Loglikelihood.
-            prev_beta : np.array
-                Previous beta vector in shape (n_features+1,).
+        gradient : list of np.array
+            Gradient vector in shape (n_features+1,).
+        hessian : list of np.array
+            Hessian matrix in shape (n_features+1, n_features+1).
+        loglikelihood : list of float
+            Loglikelihood.
+        current_iteration : int
+            Current iteration, starts from 1.
+        max_iterations : int
+            Maximum number of iterations.
+        prev_loglikelihood : float
+            Loglikelihood.
+        prev_beta : np.array
+            Previous beta vector in shape (n_features+1,).
+
         Returns
         -------
-            beta : np.array
-                Updated beta vector in shape (n_features+1,).
-            prev_beta : np.array
-                Updated beta vector in shape (n_features+1,).
-            prev_loglikelihood : float
-                Updated loglikelihood.
-            inv_hessian : np.array
-                If meeting the termination criterion,
-                the inverse hessian (n_features+1, n_features+1).
-                Otherwise, None.
-            jump_to : str
-                If meeting the termination criterion, 'global_stats'.
-                Otherwise, 'local_iter_params'.
+        beta : np.array
+            Updated beta vector in shape (n_features+1,).
+        prev_beta : np.array
+            Updated beta vector in shape (n_features+1,).
+        prev_loglikelihood : float
+            Updated loglikelihood.
+        inv_hessian : np.array
+            If meeting the termination criterion,
+            the inverse hessian (n_features+1, n_features+1).
+            Otherwise, None.
+        jump_to : str
+            If meeting the termination criterion, 'global_stats'.
+            Otherwise, 'local_iter_params'.
         """
         if (
             isinstance(gradient, list)
@@ -1290,26 +1318,27 @@ class LogisticRegression(UseCase):
 
         Parameters
         ----------
-            X : np.array
-                X matrix in shape (n_samples, n_features+1).
-            y : np.array
-                Vector in shape (n_samples,).
-            beta : np.array
-                Updated beta vector in shape (n_features+1,).
-            current_iteration : int
-                Current iteration.
+        X : np.array
+            X matrix in shape (n_samples, n_features+1).
+        y : np.array
+            Vector in shape (n_samples,).
+        beta : np.array
+            Updated beta vector in shape (n_features+1,).
+        current_iteration : int
+            Current iteration.
+
         Returns
         -------
-            gradient : np.array
-                Gradient vector in shape (n_features+1,).
-            hessian : np.array
-                Hessian matrix in shape (n_features+1, n_features+1).
-            loglikelihood : float
-                Loglikelihood.
-            current_iteration : int
-                Updated current iteration.
-            jump_to : str
-                'global_params' to update global parameters.
+        gradient : np.array
+            Gradient vector in shape (n_features+1,).
+        hessian : np.array
+            Hessian matrix in shape (n_features+1, n_features+1).
+        loglikelihood : float
+            Loglikelihood.
+        current_iteration : int
+            Updated current iteration.
+        jump_to : str
+            'global_params' to update global parameters.
         """
         model = gwasprs.regression.LogisticRegression(beta)
         gradient = model.gradient(X, y)
@@ -1325,18 +1354,19 @@ class LogisticRegression(UseCase):
 
         Parameters
         ----------
-            beta : np.array
-                Global beta vector in shape (n_features+1,).
-            inv_hessian : np.array
-                Inverse hessian matrix (n_features+1, n_features+1).
+        beta : np.array
+            Global beta vector in shape (n_features+1,).
+        inv_hessian : np.array
+            Inverse hessian matrix (n_features+1, n_features+1).
+
         Returns
         -------
-            t_stat : np.array
-                T-statistic vector in shape (n_features+1,).
-            pval : np.array
-                P-value vector in shape (n_features+1,).
-            beta : np.array
-                Global beta vector in shape (n_features+1,).
+        t_stat : np.array
+            T-statistic vector in shape (n_features+1,).
+        pval : np.array
+            P-value vector in shape (n_features+1,).
+        beta : np.array
+            Global beta vector in shape (n_features+1,).
         """
         t_stat, pval = gwasprs.stats.logistic_stats(beta, inv_hessian)
         return t_stat, pval, beta
@@ -1379,25 +1409,29 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            filtered_bfile_path : str
-                The path to the bfile.
-            filtered_cov_path : str
-                The path to the covariate file.
-            pheno_path : str
-                The path to the phenotype file.
-            pheno_name : str
-                The column name of the phenotype.
-            **kwargs : dict, optional
-                Additional arguments for the GWASData.custom method.
+        filtered_bfile_path : str
+            The path to the bfile.
+        filtered_cov_path : str
+            The path to the covariate file.
+        pheno_path : str
+            The path to the phenotype file.
+        pheno_name : str
+            The column name of the phenotype.
+        **kwargs : dict, optional
+            Additional arguments for the GWASData.custom method.
+
         Returns
         -------
-            A : np.array
-                Genotype matrix in shape (n_sample, n_SNP).
+        A : np.array
+            Genotype matrix in shape (n_sample, n_SNP).
+
         See also
         --------
-        GWASData.subset
-        GWASData.impute_covariates
-        GWASData.add_unique_snp_id
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.subset`
+
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.impute_covariates`
+
+        `rafael.fedalgo.gwasprs.gwasdata.GWASData.add_unique_snp_id`
         """
         logging.info("Loading bed file.")
         data = gwasprs.GWASData.read(
@@ -1415,16 +1449,17 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Matrix in shape (n_sample, n_feature).
+        A : np.array
+            Matrix in shape (n_sample, n_feature).
+
         Returns
         -------
-            col_sum : np.array
-                Column sum vector in shape (n_feature,).
-            row_count : np.array
-                The number of samples without missing value for each SNP. # TODO: Check this.
-            jump_to : str
-                'global_mean' to calculate nanmean.
+        col_sum : np.array
+            Column sum vector in shape (n_feature,).
+        row_count : np.array
+            The number of samples without missing value for each SNP. # TODO: Check this.
+        jump_to : str
+            'global_mean' to calculate nanmean.
         """
         col_sum, row_count = gwasprs.stats.nansum(A)
         jump_to = "global_mean"
@@ -1436,14 +1471,15 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Matrix in shape (n_sample, n_feature).
+        A : np.array
+            Matrix in shape (n_sample, n_feature).
+
         Returns
         -------
-            col_sum : np.array
-                Column sum vector in shape (n_feature,).
-            row_count : np.array
-                The number of samples.
+        col_sum : np.array
+            Column sum vector in shape (n_feature,).
+        row_count : np.array
+            The number of samples.
         """
         return A.sum(axis=0), A.shape[0]
 
@@ -1453,20 +1489,21 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Matrix in shape (n_sample, n_feature).
-            mean : np.array
-                Vector in shape (n_feature,).
+        A : np.array
+            Matrix in shape (n_sample, n_feature).
+        mean : np.array
+            Vector in shape (n_feature,).
+
         Returns
         -------
-            A : np.array
-                Mean-imputed matrix in shape (n_sample, n_feature).
-            col_sum : np.array
-                Column sum vector in shape (n_feature,).
-            row_count : int
-                Number of samples.
-            jump_to : str
-                'global_mean' to calculate global mean.
+        A : np.array
+            Mean-imputed matrix in shape (n_sample, n_feature).
+        col_sum : np.array
+            Column sum vector in shape (n_feature,).
+        row_count : int
+            Number of samples.
+        jump_to : str
+            'global_mean' to calculate global mean.
         """
         A = jnp.array(A)
         A = gwasprs.stats.impute_with_mean(A, mean)
@@ -1480,17 +1517,18 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            col_sum : list of np.array
-                Column sum vector in shape (n_feature,) from edges.
-            row_count : list of int
-                Number of samples.
+        col_sum : list of np.array
+            Column sum vector in shape (n_feature,) from edges.
+        row_count : list of int
+            Number of samples.
+
         Returns
         -------
-            mean : np.array
-                The global mean vector in shape (n_feature,).
-            jump_to : str
-                Jumps to 'local_imputed_mean' or 'local_ssq'.
-                Depends on the previous step.
+        mean : np.array
+            The global mean vector in shape (n_feature,).
+        jump_to : str
+            Jumps to 'local_imputed_mean' or 'local_ssq'.
+            Depends on the previous step.
         """
         if isinstance(col_sum, (list, tuple)):
             col_sum = gwasprs.aggregations.SumUp()(*col_sum)
@@ -1508,18 +1546,19 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Mean-imputed matrix in shape (n_sample, n_feature).
-            mean : np.array
-                The global mean vector in shape (n_feature,).
+        A : np.array
+            Mean-imputed matrix in shape (n_sample, n_feature).
+        mean : np.array
+            The global mean vector in shape (n_feature,).
+
         Returns
         -------
-            A : np.array
-                Matrix with 0 column means.
-            ssq : np.array
-                Sum of square vector in shape (n_feature,).
-            row_count : int
-                The number of all samples.
+        A : np.array
+            Matrix with 0 column means.
+        ssq : np.array
+            Sum of square vector in shape (n_feature,).
+        row_count : int
+            The number of all samples.
         """
         A = gwasprs.stats.make_mean_zero(A, mean)
         ssq = gwasprs.stats.sum_of_square(A)
@@ -1532,16 +1571,17 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            ssq : list of np.array
-                Sum of square vector in shape (n_feature,) from edges.
-            row_count : int
-                The number of all samples in edges.
+        ssq : list of np.array
+            Sum of square vector in shape (n_feature,) from edges.
+        row_count : int
+            The number of all samples in edges.
+
         Returns
         -------
-            var : np.array
-                The global variance vector in shape (n_feature,).
-            delete : np.array
-                The index to delete variants whose variance is 0.
+        var : np.array
+            The global variance vector in shape (n_feature,).
+        delete : np.array
+            The index to delete variants whose variance is 0.
         """
         if isinstance(ssq, (list, tuple)):
             ssq = gwasprs.aggregations.SumUp()(*ssq)
@@ -1557,16 +1597,17 @@ class Standadization(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Matrix with 0 column means.
-            var : np.array
-                The global variance vector in shape (n_feature,).
-            delete : np.array
-                The index to delete variants whose variance is 0.
+        A : np.array
+            Matrix with 0 column means.
+        var : np.array
+            The global variance vector in shape (n_feature,).
+        delete : np.array
+            The index to delete variants whose variance is 0.
+
         Returns
         -------
-            A : np.array
-                The standardized matrix in shape (n_sample, n_feature).
+        A : np.array
+            The standardized matrix in shape (n_sample, n_feature).
         """
         A = gwasprs.stats.standardize(A, var, delete)
         return A
@@ -1644,20 +1685,21 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            n_features : int
-                The number of features.
-            k1 : int
-                The number of latent variables.
+        n_features : int
+            The number of features.
+        k1 : int
+            The number of latent variables.
+
         Returns
         -------
-            prev_U : np.array
-                The randomly generated matrix in shape (n_feature, k1).
-            current_iteration : int
-                Current iteration = 1.
-            converged : bool
-                Convergence flag.
-            Us : list of np.array
-                Empty list to store eigenvectors from each iteration.
+        prev_U : np.array
+            The randomly generated matrix in shape (n_feature, k1).
+        current_iteration : int
+            Current iteration = 1.
+        converged : bool
+            Convergence flag.
+        Us : list of np.array
+            Empty list to store eigenvectors from each iteration.
         """
         prev_U = gwasprs.linalg.init_rand_U(n_features, k1)
         current_iteration = 1
@@ -1671,14 +1713,15 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Standardized matrix in shape (n_feature, n_sample).
-            V : np.array
-                The private eigenvectors in shape (n_sample, k1).
+        A : np.array
+            Standardized matrix in shape (n_feature, n_sample).
+        V : np.array
+            The private eigenvectors in shape (n_sample, k1).
+
         Returns
         -------
-            U : np.array
-                Updated eigenvectors in shape (n_feature, k1).
+        U : np.array
+            Updated eigenvectors in shape (n_feature, k1).
         """
         U = gwasprs.linalg.update_local_U(A, V)
         return U
@@ -1689,14 +1732,15 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            U : np.array
-                Eigenvectors in shape (n_feature, k1) from edges.
+        U : np.array
+            Eigenvectors in shape (n_feature, k1) from edges.
+
         Returns
         -------
-            U : np.array
-                Global orthonormalized eigenvectors in shape (n_feature, k1).
-            S : np.array
-                The singular values in shape (k1,).
+        U : np.array
+            Global orthonormalized eigenvectors in shape (n_feature, k1).
+        S : np.array
+            The singular values in shape (k1,).
         """
         if isinstance(U, (list, tuple)):
             U = gwasprs.linalg.aggregations.SumUp()(*U)
@@ -1709,16 +1753,17 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            U : np.array
-                Current eigenvectors in shape (n_feature, k1).
-            prev_U : np.array
-                Previous eigenvectors in shape (n_feature, k1).
-            epsilon : float
-                The tolerance of the convergence.
+        U : np.array
+            Current eigenvectors in shape (n_feature, k1).
+        prev_U : np.array
+            Previous eigenvectors in shape (n_feature, k1).
+        epsilon : float
+            The tolerance of the convergence.
+
         Returns
         -------
-            converged : bool
-                Convergence flag.
+        converged : bool
+            Convergence flag.
         """
         converged, _ = gwasprs.linalg.check_eigenvector_convergence(U, prev_U, epsilon)
         return converged
@@ -1730,20 +1775,21 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            U : np.array
-                Current eigenvectors in shape (n_feature, k1).
-            Us : list of np.array
-                The list to store eigenvectors from each iteration.
-            current_iteration : int
-                Current iteration.
+        U : np.array
+            Current eigenvectors in shape (n_feature, k1).
+        Us : list of np.array
+            The list to store eigenvectors from each iteration.
+        current_iteration : int
+            Current iteration.
+
         Returns
         -------
-            prev_U : np.array
-                Current as previous eigenvectors in shape (n_feature, k1).
-            Us : list of np.array
-                Updated list of eigenvectors.
-            current_iteration : int
-                Current iteration + 1.
+        prev_U : np.array
+            Current as previous eigenvectors in shape (n_feature, k1).
+        Us : list of np.array
+            Updated list of eigenvectors.
+        current_iteration : int
+            Current iteration + 1.
         """
         prev_U, Us, current_iteration = gwasprs.linalg.update_Us(
             U, Us, current_iteration
@@ -1756,22 +1802,23 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Standardized matrix in shape (n_feature, n_sample).
-            U : np.array
-                Updated global sharable eigenvectors in shape (n_feature, k1).
-            converged : bool
-                Convergence flag.
-            current_iteration : int
-                Used for determining termination.
+        A : np.array
+            Standardized matrix in shape (n_feature, n_sample).
+        U : np.array
+            Updated global sharable eigenvectors in shape (n_feature, k1).
+        converged : bool
+            Convergence flag.
+        current_iteration : int
+            Used for determining termination.
+
         Returns
         -------
-            V : np.array
-                Updated private eigenvectors in shape (n_sample, k1).
-            jump_to : str
-                If not meeting the termination criteria,
-                jump to the next iteration, 'update_local_U'.
-                Otherwise, jump to 'decompose_global_Us'.
+        V : np.array
+            Updated private eigenvectors in shape (n_sample, k1).
+        jump_to : str
+            If not meeting the termination criteria,
+            jump to the next iteration, 'update_local_U'.
+            Otherwise, jump to 'decompose_global_Us'.
         """
         V = gwasprs.linalg.update_local_V(A, U)
         if not converged and current_iteration < max_iterations:
@@ -1786,13 +1833,14 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            Us : list of np.array
-                The list of eigenvectors from each iteration.
+        Us : list of np.array
+            The list of eigenvectors from each iteration.
+
         Returns
         -------
-            U : np.array
-                Decomposed eigenvectors in shape (n_features, k1*I),
-                I is the number of iterations.
+        U : np.array
+            Decomposed eigenvectors in shape (n_features, k1*I),
+            I is the number of iterations.
         """
         U = gwasprs.linalg.decompose_U_stack(Us)
         return U
@@ -1803,17 +1851,18 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            A : np.array
-                Standardized matrix in shape (n_feature, n_sample).
-            U : np.array
-                Decomposed eigenvectors in shape (n_features, k1*I),
-                I is the number of iterations.
+        A : np.array
+            Standardized matrix in shape (n_feature, n_sample).
+        U : np.array
+            Decomposed eigenvectors in shape (n_features, k1*I),
+            I is the number of iterations.
+
         Returns
         -------
-            P : np.array
-                Proxy data matrix in shape (k1*I, n_sample).
-            PPt : np.array
-                The proxy covariance matrix in shape (k1*I, k1*I).
+        P : np.array
+            Proxy data matrix in shape (k1*I, n_sample).
+        PPt : np.array
+            The proxy covariance matrix in shape (k1*I, k1*I).
         """
         P = gwasprs.linalg.create_proxy_matrix(A, U)
         PPt = gwasprs.linalg.covariance_from_proxy_matrix(P)
@@ -1825,14 +1874,15 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            PPt : np.array
-                The proxy covariance matrix in shape (k1*I, k1*I).
-            k2 : int
-                The specified number of latent variables.
+        PPt : np.array
+            The proxy covariance matrix in shape (k1*I, k1*I).
+        k2 : int
+            The specified number of latent variables.
+
         Returns
         -------
-            Vp : np.array
-                Eigenvectors in shape (k1*I, k2).
+        Vp : np.array
+            Eigenvectors in shape (k1*I, k2).
         """
         if isinstance(PPt, (list, tuple)):
             PPt = gwasprs.aggregations.SumUp()(*PPt)
@@ -1845,14 +1895,15 @@ class RandomizedSVD(UseCase):
 
         Parameters
         ----------
-            P : np.array
-                Proxy data matrix in shape (k1*I, n_sample).
-            Vp : np.array
-                Global eigenvectors in shape (k1*I, k2).
+        P : np.array
+            Proxy data matrix in shape (k1*I, n_sample).
+        Vp : np.array
+            Global eigenvectors in shape (k1*I, k2).
+
         Returns
         -------
-            V : np.array
-                Final private eigenvectors in shape (n_sample, k2).
+        V : np.array
+            Final private eigenvectors in shape (n_sample, k2).
         """
         V = gwasprs.linalg.local_V_from_proxy_matrix(P, Vp)
         return V
@@ -1902,15 +1953,16 @@ class GramSchmidt(UseCase):
 
         Parameters
         ----------
-            M : np.array
-                Matrix in shape (n_sample, k),
-                where k is the numnber of latent variables.
+        M : np.array
+            Matrix in shape (n_sample, k),
+            where k is the numnber of latent variables.
+
         Returns
         -------
-            partial_norm : float
-                The partial norm of first eigenvector.
-            orthogonalized : list of np.array
-                The list stores partial eigenvectors.
+        partial_norm : float
+            The partial norm of first eigenvector.
+        orthogonalized : list of np.array
+            The list stores partial eigenvectors.
         """
         partial_norm, orthogonalized = gwasprs.linalg.init_gram_schmidt(M)
         return partial_norm, orthogonalized
@@ -1921,14 +1973,15 @@ class GramSchmidt(UseCase):
 
         Parameters
         ----------
-            partial_norm : float
-                The partial norm of first eigenvector.
+        partial_norm : float
+            The partial norm of first eigenvector.
+
         Returns
         -------
-            global_norms : list of float
-                The list stores the first global norm.
-            eigen_idx : int
-                To indicate which eigenvector being orthonormalized.
+        global_norms : list of float
+            The list stores the first global norm.
+        eigen_idx : int
+            To indicate which eigenvector being orthonormalized.
         """
         if isinstance(partial_norm, (list, tuple)):
             global_norms = [gwasprs.aggregations.SumUp()(*partial_norm)]
@@ -1943,19 +1996,20 @@ class GramSchmidt(UseCase):
 
         Parameters
         ----------
-            M : np.array
-                Matrix in shape (n_sample, k),
-                where k is the numnber of latent variables.
-            orthogonalized : list of np.array
-                The list stores partial eigenvectors.
-            eigen_idx : int
-                To indicate which eigenvector being orthonormalized.
-            global_norms : list of float
-                The list stores the global norms.
+        M : np.array
+            Matrix in shape (n_sample, k),
+            where k is the numnber of latent variables.
+        orthogonalized : list of np.array
+            The list stores partial eigenvectors.
+        eigen_idx : int
+            To indicate which eigenvector being orthonormalized.
+        global_norms : list of float
+            The list stores the global norms.
+
         Returns
         -------
-            residuals : list of float
-                i-1 residuals used for orthogonalized ith eigenvector.
+        residuals : list of float
+            i-1 residuals used for orthogonalized ith eigenvector.
         """
         residuals = gwasprs.project.compute_residuals(
             M, orthogonalized, eigen_idx, global_norms
@@ -1968,12 +2022,13 @@ class GramSchmidt(UseCase):
 
         Parameters
         ----------
-            residuals : list of float
-                i-1 residuals used for orthogonalized ith eigenvector.
+        residuals : list of float
+            i-1 residuals used for orthogonalized ith eigenvector.
+
         Returns
         -------
-            residuals : np.array
-                Global residuals in shape (i-1,).
+        residuals : np.array
+            Global residuals in shape (i-1,).
         """
         if isinstance(residuals, (list, tuple)):
             residuals = gwasprs.aggregations.SumUp()(*residuals)
@@ -1986,22 +2041,23 @@ class GramSchmidt(UseCase):
 
         Parameters
         ----------
-            M : np.array
-                Matrix in shape (n_sample, k),
-                where k is the numnber of latent variables.
-            orthogonalized : list of np.array
-                The list stores partial eigenvectors.
-            eigen_idx : int
-                To indicate which eigenvector being orthonormalized.
-            residuals : np.array
-                Global residuals in shape (i-1,),
-                which also equals to (eigen_idx,).
+        M : np.array
+            Matrix in shape (n_sample, k),
+            where k is the numnber of latent variables.
+        orthogonalized : list of np.array
+            The list stores partial eigenvectors.
+        eigen_idx : int
+            To indicate which eigenvector being orthonormalized.
+        residuals : np.array
+            Global residuals in shape (i-1,),
+            which also equals to (eigen_idx,).
+
         Returns
         -------
-            partial_norm : float
-                The partial norm of eigen_idx+1th eigenvector.
-            orthogonalized : list of np.array
-                The list stores partial eigenvectors.
+        partial_norm : float
+            The partial norm of eigen_idx+1th eigenvector.
+        orthogonalized : list of np.array
+            The list stores partial eigenvectors.
         """
         ortho_v = gwasprs.linalg.orthogonalize(
             M[:, eigen_idx], orthogonalized, residuals
@@ -2016,24 +2072,25 @@ class GramSchmidt(UseCase):
 
         Parameters
         ----------
-            global_norms : list of float
-                The list stores the global norms.
-            partial_norm : float
-                The partial norm of eigen_idx+1th eigenvector.
-            eigen_idx : int
-                To indicate which eigenvector being orthonormalized.
-            k2 : int
-                The number of output latent variables.
+        global_norms : list of float
+            The list stores the global norms.
+        partial_norm : float
+            The partial norm of eigen_idx+1th eigenvector.
+        eigen_idx : int
+            To indicate which eigenvector being orthonormalized.
+        k2 : int
+            The number of output latent variables.
+
         Returns
         -------
-            global_norms : list of float
-                The updated list stores the global norms.
-            eigen_idx : int
-                To indicate which eigenvector being orthonormalized.
-            jump_to : str
-                If approaching the last eigenvector (k2th),
-                jump to the normalization step.
-                Otherwise, jump to the local_residuals step.
+        global_norms : list of float
+            The updated list stores the global norms.
+        eigen_idx : int
+            To indicate which eigenvector being orthonormalized.
+        jump_to : str
+            If approaching the last eigenvector (k2th),
+            jump to the normalization step.
+            Otherwise, jump to the local_residuals step.
         """
         if isinstance(partial_norm, (list, tuple)):
             norm = gwasprs.aggregations.SumUp()(*partial_norm)
@@ -2053,14 +2110,15 @@ class GramSchmidt(UseCase):
 
         Parameters
         ----------
-            global_norms : list of float
-                The list stores the global norms.
-            orthogonalized : list of np.array
-                The list stores partial eigenvectors.
+        global_norms : list of float
+            The list stores the global norms.
+        orthogonalized : list of np.array
+            The list stores partial eigenvectors.
+
         Returns
         -------
-            M : np.array
-                Normalized eigenvectors in shape (n_sample, k2),
+        M : np.array
+            Normalized eigenvectors in shape (n_sample, k2),
         """
         M = gwasprs.stats.normalize(global_norms, orthogonalized)
         return M
@@ -2095,15 +2153,15 @@ class CoxPHRegression(UseCase):
 
         Parameters
         ----------
-            n_features : int
-                The number of features to be perform Cox-PH regression.
-            r : int
-                The pseudo-number of samples of Xanc.
+        n_features : int
+            The number of features to be perform Cox-PH regression.
+        r : int
+            The pseudo-number of samples of Xanc.
 
         Returns
         -------
-            Xanc : np.array
-                The anchor matrix with shape (r, n_features).
+        Xanc : np.array
+            The anchor matrix with shape (r, n_features).
         """
         return np.random.randn(r, n_features)
 
@@ -2119,23 +2177,23 @@ class CoxPHRegression(UseCase):
 
         Parameters
         ----------
-            clinical_data_path : str
-                The path to clinical metadata.
-            keep_feature_cols : list of strings
-                The features to be perform Cox-PH regression.
-            meta_cols : list of str
-                The columns recording the sample information.
+        clinical_data_path : str
+            The path to clinical metadata.
+        keep_feature_cols : list of strings
+            The features to be perform Cox-PH regression.
+        meta_cols : list of str
+            The columns recording the sample information.
 
         Returns
         -------
-            X : np.array
-                The feature matrix with shape (n_samples, n_features).
-            y : np.array
-                The concatenated time and event vectors with shape (n_samples, 2).
-            keep_feature_cols : list of str
-                The features to be perform Cox-PH regression.
-            meta: pd.DataFrame
-                The sample metadata.
+        X : np.array
+            The feature matrix with shape (n_samples, n_features).
+        y : np.array
+            The concatenated time and event vectors with shape (n_samples, 2).
+        keep_feature_cols : list of str
+            The features to be perform Cox-PH regression.
+        meta: pd.DataFrame
+            The sample metadata.
         """
         metadata = pd.read_csv(clinical_data_path)
 
@@ -2204,38 +2262,38 @@ class CoxPHRegression(UseCase):
 
         Parameters
         ----------
-            X : np.array
-                The feature matrix with shape (n_samples, n_features).
-            Xanc : np.array
-                The global anchor matrix with shape (r, n_features).
-                where r is the pseudo-number of samples of Xanc.
-            y : np.array
-                The concatenated time and event vectors with shape (n_samples, 2).
-            k : int
-                The latent dimension of Fdr. Notice that the ultimate dimension is min(k, len(S)),
-                where the S is the number of nonzero singular values.
-            bs_prop : float
-                The proportion of the samples in a client used for bootstrapping for each time.
-            bs_times : int
-                The number of times to bootstrap.
-            alpha : float
-                The level in the confidence intervals.
-                It is `alpha` parameter in `lifelines.fitters.coxph_fitter.CoxPHFitter`.
-            step_size : float
-                Deal with the fitting error, `delta contains nan value(s)`.
-                See also: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+        X : np.array
+            The feature matrix with shape (n_samples, n_features).
+        Xanc : np.array
+            The global anchor matrix with shape (r, n_features).
+            where r is the pseudo-number of samples of Xanc.
+        y : np.array
+            The concatenated time and event vectors with shape (n_samples, 2).
+        k : int
+            The latent dimension of Fdr. Notice that the ultimate dimension is min(k, len(S)),
+            where the S is the number of nonzero singular values.
+        bs_prop : float
+            The proportion of the samples in a client used for bootstrapping for each time.
+        bs_times : int
+            The number of times to bootstrap.
+        alpha : float
+            The level in the confidence intervals.
+            It is `alpha` parameter in `lifelines.fitters.coxph_fitter.CoxPHFitter`.
+        step_size : float
+            Deal with the fitting error, `delta contains nan value(s)`.
+            See also: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 
         Returns
         -------
-            F : np.array
-                The linear projection matrix to be used for creating the projected matrices,
-                X_tilde and Xanc_tilde, its shape is (n_features, m tilde).
-            X_tilde : list of np.array
-                The projected feature matrix with shape (n_samples, m tilde).
-            Xanc_tilde : list of np.array
-                The projected global anchor matrix with shape (r, m tilde).
-            feature_sum : np.array
-                The sums of the features.
+        F : np.array
+            The linear projection matrix to be used for creating the projected matrices,
+            X_tilde and Xanc_tilde, its shape is (n_features, m tilde).
+        X_tilde : list of np.array
+            The projected feature matrix with shape (n_samples, m tilde).
+        Xanc_tilde : list of np.array
+            The projected global anchor matrix with shape (r, m tilde).
+        feature_sum : np.array
+            The sums of the features.
         """
         if len(X) == 0:
             return None, [None], [None], np.zeros(X.shape[1])
@@ -2277,41 +2335,41 @@ class CoxPHRegression(UseCase):
 
         Parameters
         ----------
-            Xs_tilde : list of lists of np.array
-                The data structure is:
-                [
-                    [X_tilde],
-                    [X_tilde],...
-                ]
-                The shape for each projected feature matrix is (nc, m tilde).
-            Xancs_tilde : list of lists of np.array
-                The data structure is:
-                [
-                    [Xanc_tilde],
-                    [Xanc_tilde],...
-                ]
-                The shape for each projected global anchor matrix is (r, m tilde).
-            ys : list of np.array
-                The concatenated time and event vectors with shape (nc, 2).
-            sums : list of np.array
-                The sums of the features.
-            alpha : float
-                The level in the confidence intervals.
-                It is `alpha` parameter in `lifelines.fitters.coxph_fitter.CoxPHFitter`.
-            step_size : float
-                Deal with the fitting error, `delta contains nan value(s)`.
-                See also: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
+        Xs_tilde : list of lists of np.array
+            The data structure is:
+            [
+                [X_tilde],
+                [X_tilde],...
+            ]
+            The shape for each projected feature matrix is (nc, m tilde).
+        Xancs_tilde : list of lists of np.array
+            The data structure is:
+            [
+                [Xanc_tilde],
+                [Xanc_tilde],...
+            ]
+            The shape for each projected global anchor matrix is (r, m tilde).
+        ys : list of np.array
+            The concatenated time and event vectors with shape (nc, 2).
+        sums : list of np.array
+            The sums of the features.
+        alpha : float
+            The level in the confidence intervals.
+            It is `alpha` parameter in `lifelines.fitters.coxph_fitter.CoxPHFitter`.
+        step_size : float
+            Deal with the fitting error, `delta contains nan value(s)`.
+            See also: https://lifelines.readthedocs.io/en/latest/Examples.html#problems-with-convergence-in-the-cox-proportional-hazard-model
 
         Returns
         -------
-            coef : list of list of np.array
-                The beta tilde vector with shape (m tilde,).
-            coef_var : list of list of np.array
-                The variance-covariance matrix with shape (m tilde, m tilde).
-            baseline_hazard : pd.DataFrame
-                The baseline hazard values, where the index is the time.
-            feature_mean : np.array
-                The global means of the features.
+        coef : list of list of np.array
+            The beta tilde vector with shape (m tilde,).
+        coef_var : list of list of np.array
+            The variance-covariance matrix with shape (m tilde, m tilde).
+        baseline_hazard : pd.DataFrame
+            The baseline hazard values, where the index is the time.
+        feature_mean : np.array
+            The global means of the features.
         """
         assert isinstance(Xs_tilde[0], list), "Xs_tilde must be a list of lists."
         assert isinstance(Xancs_tilde[0], list), "Xancs_tilde must be a list of lists."
@@ -2347,25 +2405,25 @@ class CoxPHRegression(UseCase):
 
         Parameters
         ----------
-            keep_feature_cols : list of strings
-                The features to be perform Cox-PH regression.
-            coef : np.array
-                The beta tilde vector with shape (m tilde,).
-            coef_var : np.array
-                The variance-covariance matrix with shape (m tilde, m tilde).
-            baseline_hazard : pd.DataFrame
-                The baseline hazard values, where the index is the time.
-            mean : np.array
-                The global means of the features.
-            F : np.array
-                The linear projection matrix to be used for creating the projected matrices,
-                X_tilde and Xanc_tilde, its shape is (n_features, m tilde).
+        keep_feature_cols : list of strings
+            The features to be perform Cox-PH regression.
+        coef : np.array
+            The beta tilde vector with shape (m tilde,).
+        coef_var : np.array
+            The variance-covariance matrix with shape (m tilde, m tilde).
+        baseline_hazard : pd.DataFrame
+            The baseline hazard values, where the index is the time.
+        mean : np.array
+            The global means of the features.
+        F : np.array
+            The linear projection matrix to be used for creating the projected matrices,
+            X_tilde and Xanc_tilde, its shape is (n_features, m tilde).
 
         Returns
         -------
-            survival_func : SurvivalFunction
-                The object recovers the survival function and statistical properties
-                from the given coefficients and variance-covariance matrix.
+        survival_func : SurvivalFunction
+            The object recovers the survival function and statistical properties
+            from the given coefficients and variance-covariance matrix.
         """
         coef = F @ coef
         coef_var = F @ coef_var @ F.T
@@ -2401,23 +2459,23 @@ class KaplanMeier(UseCase):
 
         Parameters
         ----------
-            clinical_data_path : str
-                The path to clinical metadata.
-            keep_feature_cols : list of strings
-                The features to be perform Cox-PH regression.
-            meta_cols : list of str
-                The columns recording the sample information.
+        clinical_data_path : str
+            The path to clinical metadata.
+        keep_feature_cols : list of strings
+            The features to be perform Cox-PH regression.
+        meta_cols : list of str
+            The columns recording the sample information.
 
         Returns
         -------
-            X : np.array
-                The feature matrix with shape (n_samples, n_features).
-            y : np.array
-                The concatenated time and event vectors with shape (n_samples, 2).
-            keep_feature_cols : list of str
-                The features to be perform Cox-PH regression.
-            meta: pd.DataFrame
-                The sample metadata.
+        X : np.array
+            The feature matrix with shape (n_samples, n_features).
+        y : np.array
+            The concatenated time and event vectors with shape (n_samples, 2).
+        keep_feature_cols : list of str
+            The features to be perform Cox-PH regression.
+        meta: pd.DataFrame
+            The sample metadata.
         """
         metadata = pd.read_csv(clinical_data_path)
 
@@ -2490,19 +2548,19 @@ class KaplanMeier(UseCase):
 
         Parameters
         ----------
-            std_X : np.array
-                The standardized feature matrix with shape (n_samples, n_features).
-            n_std : int or float or list of int or float
-                The weight of standard deviation.
-            y : np.array
-                The concatenated time and event vectors with shape (n_samples, 2).
+        std_X : np.array
+            The standardized feature matrix with shape (n_samples, n_features).
+        n_std : int or float or list of int or float
+            The weight of standard deviation.
+        y : np.array
+            The concatenated time and event vectors with shape (n_samples, 2).
 
         Returns
         -------
-            grouped_y : list of list of np.array
-                The grouped data with shape (n_features, upper+lower, time+event).
-            n_std : list of int or float
-                The weight of standard deviation for each feature.
+        grouped_y : list of list of np.array
+            The grouped data with shape (n_features, upper+lower, time+event).
+        n_std : list of int or float
+            The weight of standard deviation for each feature.
         """
         if isinstance(n_std, (int, float)):
             n_std = [n_std] * std_X.shape[1]
@@ -2540,18 +2598,18 @@ class KaplanMeier(UseCase):
 
         Parameters
         ----------
-            grouped_y : list of list of list of np.array
-                The grouped data with shape (n_features, upper+lower, time+event).
-            alpha : float
-                The level in the confidence intervals.
+        grouped_y : list of list of list of np.array
+            The grouped data with shape (n_features, upper+lower, time+event).
+        alpha : float
+            The level in the confidence intervals.
 
         Returns
         -------
-            fitted : list of list of dict
-                The fitted Kaplan-Meier model for each feature.
-                [[fitted_upper, fitted_lower], [fitted_upper, fitted_lower],...]
-            logrank_stats : list of list of float
-                The log-rank test statistic and p-value for each feature.
+        fitted : list of list of dict
+            The fitted Kaplan-Meier model for each feature.
+            [[fitted_upper, fitted_lower], [fitted_upper, fitted_lower],...]
+        logrank_stats : list of list of float
+            The log-rank test statistic and p-value for each feature.
         """
         fitted, logrank_stats = [], []
         for feature_y in zip(*grouped_y):
@@ -3015,22 +3073,23 @@ class NaiveLDPruning(UseCase):
 
         Parameters
         ----------
-            bfile_path : str
-                input bfile prefix
-            out_path: str
-                output prune.in prefix
-            win_size: int
-                windows size for ld prune
-            step: int
-                step for ld prune
-            r2: int
-                r2 threshold for ld prune
-            extra_arg: str
-                extra argument pass to plink, default is empty string ""
+        bfile_path : str
+            input bfile prefix
+        out_path: str
+            output prune.in prefix
+        win_size: int
+            windows size for ld prune
+        step: int
+            step for ld prune
+        r2: int
+            r2 threshold for ld prune
+        extra_arg: str
+            extra argument pass to plink, default is empty string ""
+
         Returns
         -------
-            snp_list : list
-                The list of snp ids after ld purne.
+        snp_list : list
+            The list of snp ids after ld purne.
         """
         snp_list = gwasprs.ld.prune_ld(
             bfile_path, out_path, win_size, step, r2, extra_arg
@@ -3046,14 +3105,15 @@ class NaiveLDPruning(UseCase):
 
         Parameters
         ----------
-            snp_lists : list of list
-                The lists of snp ids after ld prune from edges.
-            method : str = "union", "intersect"
-                method to aggregate snp lists
+        snp_lists : list of list
+            The lists of snp ids after ld prune from edges.
+        method : str = "union", "intersect"
+            method to aggregate snp lists
+
         Returns
         -------
-            snp_list : list
-                The list of snp ids shared among all edges.
+        snp_list : list
+            The list of snp ids shared among all edges.
         """
         snp_list = gwasprs.ld.match_snp_sets(snp_lists, method=method)
         logging.info(f"There are {len(snp_list)} snp matched among all edges.")
@@ -3067,16 +3127,17 @@ class NaiveLDPruning(UseCase):
 
         Parameters
         ----------
-            bfile_path : str
-                input bfile prefix
-            out_path: str
-                output bfile and snp_list prefix
-            snp_list: NDArray
-                The list of snp ids shared among all edges.
+        bfile_path : str
+            input bfile prefix
+        out_path: str
+            output bfile and snp_list prefix
+        snp_list: NDArray
+            The list of snp ids shared among all edges.
+
         Returns
         -------
-            out_path : str
-                input bfile and snp_list prefix
+        out_path : str
+            input bfile and snp_list prefix
         """
         out_path = gwasprs.ld.extract_snps(bfile_path, out_path, snp_list)
         return out_path
