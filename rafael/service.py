@@ -247,7 +247,7 @@ class ServerService(ServiceController):
     async def gwas_prune_ld(self, config: datamodel.GWASConfig):
         results = await self.request_clients('gwas_local_prune_ld', config)
         
-        remained_snps = self.ld.global_match_snps(results.remained_snps, method='intersect')
+        remained_snps = self.ld.global_match_snps(results.remained_snps, method=config.prune_method)
         
         self.repo.add("ld_remained_snps", remained_snps)
         return datamodel.Status(status="OK")
@@ -1061,9 +1061,9 @@ class ClientService(ServiceController):
         remained_snps = self.ld.local_ldprune(
             bfile_path,
             f'{config.local_qc_output_path}.ld',
-            win_size=50,
-            step=5,
-            r2=0.2,
+            win_size=config.win_size,
+            step=config.step,
+            r2=config.r2,
             extra_arg="--bad-ld"  # This is for the few SNPs situation
         )
         self.logger.info(f"Client - local_prune_ld: {time.perf_counter_ns() - t} ns")
