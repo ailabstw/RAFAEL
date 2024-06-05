@@ -228,8 +228,6 @@ class GWASConfig(PlanBaseConfig):
     pheno_path: Optional[Union[List[str], str]] = None
     pheno_name: Optional[Union[List[str], str]] = 'pheno'
     regression_save_dir: Union[List[str], str]
-    local_qc_output_path: Union[List[str], str]
-    global_qc_output_path: str
     
     # Logistic sepcific
     logistic_max_iters: int = 16
@@ -243,6 +241,14 @@ class GWASConfig(PlanBaseConfig):
     geno: Optional[float] = 0.02
     hwe: Optional[float] = 5e-7
     mind: Optional[float] = 0.02
+    local_qc_output_path: Union[List[str], str]
+    global_qc_output_path: str
+    
+    # These are for the LD-pruning
+    prune_method: Optional[str] = "intersect"
+    win_size: Optional[int] = 50
+    step: Optional[int] = 5
+    r2: Optional[float] = 0.2
     
     # These are for the PCA (SVDConfig)
     k1: Optional[int] = 20

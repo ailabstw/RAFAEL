@@ -23,11 +23,6 @@ RUN locale-gen en_US.UTF-8 \
 WORKDIR /rafael
 COPY . /rafael
 
-# prepare for the services
-RUN mkdir /rafael/services/configs
-RUN mkdir /rafael/services/log
-RUN mkdir /rafael/services/results
-
 # uvicorn parameters
 ENV ROLE="server"
 ENV PORT=8000

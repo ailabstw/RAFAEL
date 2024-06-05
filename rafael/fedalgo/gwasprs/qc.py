@@ -1,3 +1,4 @@
+import os
 from warnings import warn
 from typing import List, Tuple
 
@@ -76,6 +77,8 @@ def calculate_homo_het_count(bfile_path: str, output_path: str, snp_list: List[s
 
 
 def write_snp_list(output_path, snp_list):
+    dir_path = os.path.dirname(output_path)
+    os.makedirs(dir_path, exist_ok=True)
     output = open(output_path, "w")
     snp_list = list(map(lambda snp: snp + "\n", snp_list))
     output.writelines(snp_list)
@@ -187,6 +190,8 @@ def filter_snp(
     obs_summary.loc[geno_filter & hwe_filter & maf_filter, "PASS"] = True
     snp_id = obs_summary[obs_summary.PASS].ID.values
 
+    dir_path = os.path.dirname(save_path)
+    os.makedirs(dir_path, exist_ok=True)
     obs_summary.to_csv(f"{save_path}", index=False)
 
     return snp_id
