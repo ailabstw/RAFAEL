@@ -32,23 +32,23 @@ We provide the Dockerfile to make users easily deploy a federated analysis servi
     - [**Service Configuration**](#service-configuration)
     - [**Uvicorn Service**](#uvicorn-service)
   - [**Main Federated Analytic Algorithms**](#main-federated-analytic-algorithms)
-  - [**GWAS**](#gwas)
-    - [**GWAS - BasicBfileQC (GWASConfig)**](#gwas---basicbfileqc-gwasconfig)
-    - [**GWAS - LDPruning (GWASConfig)**](#gwas---ldpruning-gwasconfig)
-    - [**GWAS - GenotypePCA (GWASConfig)**](#gwas---genotypepca-gwasconfig)
-    - [**GWAS - CovariateStdz (GWASConfig)**](#gwas---covariatestdz-gwasconfig)
-    - [**GWAS - QuantGWAS (GWASConfig)**](#gwas---quantgwas-gwasconfig)
-    - [**GWAS - FullQuantGWAS (GWASConfig)**](#gwas---fullquantgwas-gwasconfig)
-    - [**GWAS - BinGWAS (GWASConfig)**](#gwas---bingwas-gwasconfig)
-    - [**GWAS - FullBinGWAS (GWASConfig)**](#gwas---fullbingwas-gwasconfig)
-  - [**Linear Algebra**](#linear-algebra)
-    - [**LinAlg - RandomizedSVD**](#linalg---randomizedsvd)
-    - [**LinAlg - PCA**](#linalg---pca)
-    - [**LinAlg - SVDfromTabular**](#linalg---svdfromtabular)
-    - [**LinAlg - PCAfromTabular**](#linalg---pcafromtabular)
-  - [**Survival**](#survival)
-    - [**Survival - CoxPHRegression**](#survival---coxphregression)
-    - [**Survival - KaplanMeier**](#survival---kaplanmeier)
+    - [**GWAS**](#gwas)
+      - [**GWAS - BasicBfileQC (GWASConfig)**](#gwas---basicbfileqc-gwasconfig)
+      - [**GWAS - LDPruning (GWASConfig)**](#gwas---ldpruning-gwasconfig)
+      - [**GWAS - GenotypePCA (GWASConfig)**](#gwas---genotypepca-gwasconfig)
+      - [**GWAS - CovariateStdz (GWASConfig)**](#gwas---covariatestdz-gwasconfig)
+      - [**GWAS - QuantGWAS (GWASConfig)**](#gwas---quantgwas-gwasconfig)
+      - [**GWAS - FullQuantGWAS (GWASConfig)**](#gwas---fullquantgwas-gwasconfig)
+      - [**GWAS - BinGWAS (GWASConfig)**](#gwas---bingwas-gwasconfig)
+      - [**GWAS - FullBinGWAS (GWASConfig)**](#gwas---fullbingwas-gwasconfig)
+    - [**Linear Algebra**](#linear-algebra)
+      - [**LinAlg - RandomizedSVD (SVDConfig)**](#linalg---randomizedsvd-svdconfig)
+      - [**LinAlg - PCA (SVDConfig)**](#linalg---pca-svdconfig)
+      - [**LinAlg - SVDfromTabular (TabularDataSVDConfig)**](#linalg---svdfromtabular-tabulardatasvdconfig)
+      - [**LinAlg - PCAfromTabular (TabularDataSVDConfig)**](#linalg---pcafromtabular-tabulardatasvdconfig)
+    - [**Survival**](#survival)
+      - [**Survival - CoxPHRegression (CoxPHRegressionConfig)**](#survival---coxphregression-coxphregressionconfig)
+      - [**Survival - KaplanMeier (KaplanMeierConfig)**](#survival---kaplanmeier-kaplanmeierconfig)
 - [**References**](#references)
 
 
@@ -118,15 +118,15 @@ Note: Make sure the server and compensator are ready to be connected by client.
 ---
 
 The base analysis request format in RAFAEL:
-```json
+```jsonc
 {
-    "node_id": ${SERVER_NODE_ID},
+    "node_id": "${SERVER_NODE_ID}",
     "args": {
         "config": {
             // parameters for the analysis API
         }
     },
-    "api": ${ANALYSIS_API}
+    "api": "${ANALYSIS_API}"
 }
 ```
 The `config` are the parameters for the analysis API.
@@ -245,6 +245,7 @@ Quantitative trait:
 ```
 
 Binary trait:
+Assign binary phenotype data with `pheno_path`.
 ```json
 {
     "node_id": "7a5f34c4-4415-4b9a-bab7-ebbcdcc23a49",
@@ -266,7 +267,7 @@ Binary trait:
                 "data/client2/hapmap1_100_2.cov"
             ],
             "pheno_path": [
-                "data/client1/hapmap1_100_1.pheno",  # Assigned binary phenotype
+                "data/client1/hapmap1_100_1.pheno",
                 "data/client2/hapmap1_100_2.pheno"
             ],
             "regression_save_dir": [
@@ -495,7 +496,6 @@ Make sure you have been familiar with how to run a RAFAEL service in the [previo
 This section is to provide the hyperparameters for the customized service configurations and more comprehensive analysis.
 
 ## **Environment Variables to Set Up Service**
----
 The following environment variables can be assigned like so:
 ```docker
 docker run --rm -it ... -e ROLE=${ROLE} -e PORT=${PORT} ... rafael
@@ -539,9 +539,7 @@ These variables are the uvicorn parameters to initialize a service. See also [uv
 
 
 ## **Main Federated Analytic Algorithms**
----
-
-## **GWAS**
+### **GWAS**
 The base parameters for performing federated GWAS are:
 - `bfile_path`: The path to bfile with prefix. For example, client1.bed, client1.fam and client1.bim are under `~/data/`, the `bfile_path` should be `~/data/client1`.
 
@@ -560,15 +558,15 @@ The recommended combinations for the federated GWAS (means POST to these APIs st
 
 - `BinGWAS` for binary trait.
 
-- `BasicBfileQC` $\rarr$ `QunatGWAS` for the additional quality control.
+- `BasicBfileQC` &rarr; `QunatGWAS` for the additional quality control.
 
-- `BasicBfileQC` $\rarr$ `BinGWAS` for the additional quality control.
+- `BasicBfileQC` &rarr; `BinGWAS` for the additional quality control.
 
 - `FullQuantGWAS` for the complete GWAS, including the LD-pruning and PCA.
 
 - `FullBinGWAS` for the complete GWAS, including the LD-pruning and PCA.
 
-### **GWAS - BasicBfileQC ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - BasicBfileQC ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - `maf`: Filter out all variants with minor allele frequency below the given threshold. Default is 0.05.
 
 - `geno`: Filter out all SNPs with missing call rates exceeding the given value. Default is 0.02.
@@ -581,7 +579,7 @@ The recommended combinations for the federated GWAS (means POST to these APIs st
 
 - `global_qc_output_path`: The path to the output file for the QC report in server.
 
-### **GWAS - LDPruning ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - LDPruning ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - `prune_method`: The method to deal with the remained SNPs from clients after pruning at each client side. Default is "intersect". Available options are "intersect" and "union".
 
 - `win_size`: Window size in variant count. Default is 50.
@@ -590,30 +588,30 @@ The recommended combinations for the federated GWAS (means POST to these APIs st
 
 - `r2`: Variants whose $r^2$ is greater than given threshold were removed. Default is 0.2.
 
-### **GWAS - GenotypePCA ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - GenotypePCA ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - Same in [RandomizedSVD](#linalg---randomizedsvd), but the default of `svd_save_dir` is set to `local_qc_output_path`.
 
-### **GWAS - CovariateStdz ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - CovariateStdz ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - No hyperparameters
 
-### **GWAS - QuantGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - QuantGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - `block_size`: Number of SNPs to run in a block in a process. Defaults is 10000.
 
 - `num_core`: The number of cores to perform parallel computation. Default is 4.
 
-### **GWAS - FullQuantGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - FullQuantGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - The union of `BasicBfileQC`, `LDPruning`, `GenotypePCA` and `QuantGWAS`.
 
-### **GWAS - BinGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - BinGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - `logistic_max_iters`: The maximum number of iterations in logistic regression.
 
-### **GWAS - FullBinGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
+#### **GWAS - FullBinGWAS ([GWASConfig](https://github.com/ailabstw/RAFAEL/blob/1ed4a9e2a3beb3187cd72d2bfca46e46b8e4a711/rafael/datamodel.py#L224))**
 - The union of `BasicBfileQC`, `LDPruning`, `GenotypePCA` and `BinGWAS`.
 
-## **Linear Algebra**
+### **Linear Algebra**
 The federated linear algebra in RAFAEL currently supports PCA and SVD, the former can leverage the latter and the APIs supporting the federated standardization to achieve. Hence, the PCA shares the same parameters as the SVD. The tabular data reading APIs are shared as well.
 
-### **LinAlg - RandomizedSVD**
+#### **LinAlg - RandomizedSVD ([SVDConfig](https://github.com/ailabstw/RAFAEL/blob/73ae9569aeec9b5bfbea898f30a4bd057dd2a1f1/rafael/datamodel.py#L332))**
 This API cannot be directly used. It requires other APIs to prepare the variable `A` and save it to the data repository.
 - `k1`: The initial number of latent dimensions. Default is 20.
 
@@ -631,11 +629,11 @@ This API cannot be directly used. It requires other APIs to prepare the variable
 
 - `svd_save_dir`: The directory to save the eigenvectors.
 
-### **LinAlg - PCA**
+#### **LinAlg - PCA ([SVDConfig](https://github.com/ailabstw/RAFAEL/blob/73ae9569aeec9b5bfbea898f30a4bd057dd2a1f1/rafael/datamodel.py#L332))**
 This API cannot be directly used. It requires other APIs to prepare the variable `A` and save it to the data repository.
 - Same in [RandomizedSVD](#linalg---randomizedsvd).
 
-### **LinAlg - SVDfromTabular**
+#### **LinAlg - SVDfromTabular ([TabularDataSVDConfig](https://github.com/ailabstw/RAFAEL/blob/73ae9569aeec9b5bfbea898f30a4bd057dd2a1f1/rafael/datamodel.py#L370))**
 - Inherited from [RandomizedSVD](#linalg---randomizedsvd).
 
 - `file_path`: The path to the data. 
@@ -646,10 +644,10 @@ This API cannot be directly used. It requires other APIs to prepare the variable
 
 - `keep_cols`: The column names to be kept to perform SVD/PCA. When `keep_cols` is given, the `drop_cols` shouldn't be used. Default is None, meaning to use all feature in the provided data.
 
-### **LinAlg - PCAfromTabular**
+#### **LinAlg - PCAfromTabular ([TabularDataSVDConfig](https://github.com/ailabstw/RAFAEL/blob/73ae9569aeec9b5bfbea898f30a4bd057dd2a1f1/rafael/datamodel.py#L370))**
 - Same in [SVDfromTabular](#linalg---svdfromtabular).
 
-## **Survival**
+### **Survival**
 The Cox PH Regression is the implementation of [DC-COX](https://www.sciencedirect.com/science/article/pii/S1532046422002696?via%3Dihub), which secures the data in a methematical way. The current Kaplan-Meier survival analysis in RAFAEL only supports continuous data. It leverages the federated standardization APIs to divide samples into two groups and perform Kaplan-Meier survival analysis respectively.
 
 CoxPHRegression and KaplanMeier share the same base parameters:
@@ -661,7 +659,7 @@ CoxPHRegression and KaplanMeier share the same base parameters:
 
 - `save_dir`: The directory path to save the results.
 
-### **Survival - CoxPHRegression**
+#### **Survival - CoxPHRegression ([CoxPHRegressionConfig](https://github.com/ailabstw/RAFAEL/blob/73ae9569aeec9b5bfbea898f30a4bd057dd2a1f1/rafael/datamodel.py#L318C7-L318C28))**
 - `r`: The number of samples in the global anchor matrix. Default is 100.
 
 - `k`: The latent dimensions of the SVD. The decomposed matrix is used for creating proxy data matrix. Default is 20.
@@ -674,7 +672,7 @@ CoxPHRegression and KaplanMeier share the same base parameters:
 
 - `step_size`: Deal with the fitting error, `delta contains nan value(s)`. Default is 0.5.
 
-### **Survival - KaplanMeier**
+#### **Survival - KaplanMeier ([KaplanMeierConfig](https://github.com/ailabstw/RAFAEL/blob/73ae9569aeec9b5bfbea898f30a4bd057dd2a1f1/rafael/datamodel.py#L327C7-L327C24))**
 - `alpha`: The statistical significance level. Default is 0.05.
 - `n_std`: Regard `n_std` as $k$. Separate samples into $\geq k*\sigma$ and $\leq-k*\sigma$, but with the standardization, $\sigma=1$, so we can simplify as $\geq k$ and $\leq-k$. Default is 1.
 
