@@ -19,6 +19,10 @@ def nansum(A):
     return snp_sum, non_na_count
 
 
+@jit
+def _jaxmvdot(X, y):
+    return vmap(jnp.vdot, (1, None), 0)(X, y)
+
 def mvdot(
     X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
 ) -> "np.ndarray[(1,), np.floating]":
@@ -46,10 +50,14 @@ def mvdot(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(y, jax.Array):
-            return jit(vmap(jnp.vdot, (1, None), 0))(X, y)
+            return _jaxmvdot(X, y)
         else:
             return X.T @ y
 
+
+@jit
+def _jaxmvmul(X, y):
+    return vmap(jnp.vdot, (0, None), 0)(X, y)
 
 def mvmul(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -83,10 +91,13 @@ def mvmul(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(y, jax.Array):
-            return jit(vmap(jnp.vdot, (0, None), 0))(X, y)
+            return _jaxmvmul(X, y)
         else:
             return X @ y
 
+@jit
+def _jaxmmdot(X, Y):
+    return vmap(mvmul, (None, 1), 1)(X.T, Y)
 
 def mmdot(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -124,10 +135,13 @@ def mmdot(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(Y, jax.Array):
-            return jit(vmap(mvmul, (None, 1), 1))(X.T, Y)
+            return _jaxmmdot(X, Y)
         else:
             return X.T @ Y
 
+@jit
+def _jaxmatmul(X, Y):
+    return vmap(mvmul, (None, 1), 1)(X, Y)
 
 def matmul(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -163,7 +177,7 @@ def matmul(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(Y, jax.Array):
-            return jit(vmap(mvmul, (None, 1), 1))(X, Y)
+            return _jaxmatmul(X, Y)
         else:
             return X @ Y
 
@@ -426,6 +440,12 @@ def randn(n, m, seed=42):
     return jrand.normal(key=jrand.PRNGKey(seed), shape=(n, m))
 
 
+@jit
+def _compute_delta(curr, prev, col):
+    return jnp.abs(
+        jnp.sum(jnp.dot(jnp.transpose(curr[:, col]), prev[:, col]))
+    )
+
 def check_eigenvector_convergence(current, previous, tolerance, required=None):
     """
     This function checks whether two sets of vectors are assymptotically collinear,
@@ -449,9 +469,7 @@ def check_eigenvector_convergence(current, previous, tolerance, required=None):
     while col < current.shape[1] and not converged:
         # check if the scalar product of the current and the previous eigenvectors
         # is 1, which means the vectors are 'parallel'
-        delta = jnp.abs(
-            jnp.sum(jnp.dot(jnp.transpose(current[:, col]), previous[:, col]))
-        )
+        delta = _compute_delta(current, previous, col)
         deltas.append(delta)
         if delta >= 1 - tolerance:
             nr_converged = nr_converged + 1
@@ -499,6 +517,7 @@ def update_local_U(A, V):
     return U
 
 
+@jit
 def orthonormalize(M):
     """Orthonormalize matrix in aggregator
 
@@ -532,7 +551,7 @@ def update_local_V(A, U):
     V = mmdot(A, U)
     return V
 
-
+@jit
 def decompose_U_stack(Us):
     """Stack U matrices from I iterations and decompose it
 
