@@ -8,6 +8,7 @@ from jax import jit, vmap
 from jax import numpy as jnp
 from jax import scipy as jsp
 from jax import random as jrand
+from jax.typing import ArrayLike
 
 from . import stats, aggregations, block
 from .project import FederatedGramSchmidt
@@ -21,7 +22,7 @@ def nansum(A):
 
 @jit
 def _jaxmvdot(X, y):
-    return vmap(jnp.vdot, (1, None), 0)(X, y)
+    return X.T @ y
 
 def mvdot(
     X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
@@ -57,7 +58,7 @@ def mvdot(
 
 @jit
 def _jaxmvmul(X, y):
-    return vmap(jnp.vdot, (0, None), 0)(X, y)
+    return X @ y
 
 def mvmul(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -95,9 +96,10 @@ def mvmul(
         else:
             return X @ y
 
+
 @jit
 def _jaxmmdot(X, Y):
-    return vmap(mvmul, (None, 1), 1)(X.T, Y)
+    return X.T @ Y
 
 def mmdot(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -139,9 +141,10 @@ def mmdot(
         else:
             return X.T @ Y
 
+
 @jit
 def _jaxmatmul(X, Y):
-    return vmap(mvmul, (None, 1), 1)(X, Y)
+    return X @ Y
 
 def matmul(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -286,35 +289,28 @@ def batched_diagonal(X: np.ndarray) -> np.ndarray:
 
 
 @jit
-def batched_inv(X: np.ndarray) -> np.ndarray:
-    return vmap(jnp.linalg.inv, 0, 0)(X)
-
-
-def batched_cholesky(X: np.ndarray) -> np.ndarray:
-    batch_size = X.shape[0]
-    L = np.empty(X.shape)
-    for b in range(batch_size):
-        L.view()[b, :, :] = np.linalg.cholesky(X[b, :, :])
-    return L
+def batched_inv(X: ArrayLike) -> ArrayLike:
+    return jnp.linalg.inv(X)
 
 
 @jit
-def batched_solve(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return vmap(jsp.linalg.solve, (0, 0), 0)(X, y)
+def batched_cholesky(X: ArrayLike) -> ArrayLike:
+    return jnp.linalg.cholesky(X)
 
 
 @jit
-def batched_solve_lower_triangular(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return vmap(lambda X, y: jsp.linalg.solve_triangular(X, y, lower=True), (0, 0), 0)(
-        X, y
-    )
+def batched_solve(X, y):
+    return jsp.linalg.solve(X, y)
 
+    
+@jit
+def batched_solve_lower_triangular(L: ArrayLike, y: ArrayLike) -> ArrayLike:
+    return jsp.linalg.solve_triangular(L, y, lower=True)
+    
 
 @jit
-def batched_solve_trans_lower_triangular(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return vmap(
-        lambda X, y: jsp.linalg.solve_triangular(X, y, trans="T", lower=True), (0, 0), 0
-    )(X, y)
+def batched_solve_trans_lower_triangular(L: ArrayLike, z: ArrayLike) -> ArrayLike:
+    return jsp.linalg.solve_triangular(L, z, trans="T", lower=True)
 
 
 class LinearSolver(object, metaclass=abc.ABCMeta):
@@ -381,21 +377,23 @@ class CholeskySolver(LinearSolver):
             raise Exception(f"CholeskySolver doesn't support matrix of type {type(X)}")
 
 
+@jit
+def _batched_cholesky_solver(X: ArrayLike, y:ArrayLike) -> ArrayLike:
+    L = batched_cholesky(X)
+    z = batched_solve_lower_triangular(L, y)
+    return batched_solve_trans_lower_triangular(L, z)
+    
+    
 class BatchedCholeskySolver(LinearSolver):
     def __init__(self) -> None:
         super().__init__()
 
     def __call__(
         self,
-        X: "np.ndarray[(1, 1, 1), np.floating]",
-        y: "np.ndarray[(1, 1), np.floating]",
-    ):
-        # L = Cholesky(X)
-        L = batched_cholesky(X)
-        # solve Lz = y
-        z = batched_solve_lower_triangular(L, y)
-        # solve Lt beta = z
-        return batched_solve_trans_lower_triangular(L, z)
+        X: ArrayLike,
+        y: ArrayLike,
+    ) -> ArrayLike:
+        return _batched_cholesky_solver(X, y)
 
 
 class QRSolver(LinearSolver):

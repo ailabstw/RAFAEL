@@ -92,9 +92,7 @@ class BatchedLinAlgTestCase(unittest.TestCase):
               [3, 3, 3]]]
         )
         y = np.array(
-            [[[1],
-              [2],
-              [3]]]
+            [[1,2,3]]
         )
         self.A = np.concatenate((A, A), axis=0)
         self.X = np.concatenate((X, X), axis=0)
@@ -167,7 +165,7 @@ class BatchedLinAlgTestCase(unittest.TestCase):
 
         L = np.expand_dims(L, axis=0)
         ans = np.concatenate((L, L), axis=0)
-        np.testing.assert_array_equal(ans, result)
+        np.testing.assert_array_almost_equal(ans, result, decimal=4)
 
     def test_batched_cholesky_solver(self):
         y = np.random.randn(4)
