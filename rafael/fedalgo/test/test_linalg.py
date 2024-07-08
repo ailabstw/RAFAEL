@@ -92,9 +92,7 @@ class BatchedLinAlgTestCase(unittest.TestCase):
               [3, 3, 3]]]
         )
         y = np.array(
-            [[[1],
-              [2],
-              [3]]]
+            [[1,2,3]]
         )
         self.A = np.concatenate((A, A), axis=0)
         self.X = np.concatenate((X, X), axis=0)

@@ -19,9 +19,13 @@ def nansum(A):
     return snp_sum, non_na_count
 
 
+# @jit
+# def _jaxmvdot(X, y):
+#     return vmap(jnp.vdot, (1, None), 0)(X, y)
+
 @jit
 def _jaxmvdot(X, y):
-    return vmap(jnp.vdot, (1, None), 0)(X, y)
+    return X.T @ y
 
 def mvdot(
     X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
@@ -55,9 +59,13 @@ def mvdot(
             return X.T @ y
 
 
+# @jit
+# def _jaxmvmul(X, y):
+#     return vmap(jnp.vdot, (0, None), 0)(X, y)
+
 @jit
 def _jaxmvmul(X, y):
-    return vmap(jnp.vdot, (0, None), 0)(X, y)
+    return X @ y
 
 def mvmul(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -95,9 +103,13 @@ def mvmul(
         else:
             return X @ y
 
+# @jit
+# def _jaxmmdot(X, Y):
+#     return vmap(mvmul, (None, 1), 1)(X.T, Y)
+
 @jit
 def _jaxmmdot(X, Y):
-    return vmap(mvmul, (None, 1), 1)(X.T, Y)
+    return X.T @ Y
 
 def mmdot(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -139,9 +151,13 @@ def mmdot(
         else:
             return X.T @ Y
 
+# @jit
+# def _jaxmatmul(X, Y):
+#     return vmap(mvmul, (None, 1), 1)(X, Y)
+
 @jit
 def _jaxmatmul(X, Y):
-    return vmap(mvmul, (None, 1), 1)(X, Y)
+    return X @ Y
 
 def matmul(
     X: "np.ndarray[(1, 1), np.floating]",
