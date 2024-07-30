@@ -2,7 +2,7 @@ from abc import ABCMeta
 
 import numpy as np
 from jax import numpy as jnp
-from jax import pmap
+from jax import jit, pmap
 from scipy.sparse import issparse
 
 from . import linalg, stats, utils, block
@@ -207,15 +207,21 @@ class BatchedLinearRegression(LinearModel):
         y: "np.ndarray[(1, 1), np.floating]",
         acceleration="single",
     ):
-        res = self.residual(X, y, acceleration=acceleration)
+        res = self.residual(X, y, acceleration)
         return linalg.batched_vdot(res, res)
+    
+    @staticmethod
+    @jit
+    def _linear_stat(sse, dof, coef, XtX):
+        mse = jnp.expand_dims(jnp.expand_dims(sse / dof, -1), -1)
+        XtXinvs = jnp.linalg.inv(XtX)
+        vars = jnp.diagonal((mse * XtXinvs), axis1=1, axis2=2)
+        std = jnp.sqrt(vars)
+        t_stat = coef / std
+        return t_stat
 
     def t_stats(self, sse, XtX, dof):
-        mse = jnp.expand_dims(jnp.expand_dims(sse / dof, -1), -1)
-        vars = linalg.batched_diagonal(mse * linalg.batched_inv(XtX))
-        std = jnp.sqrt(vars)
-        t_stat = self.coef / std
-        return t_stat
+        return self._linear_stat(sse, dof, self.coef, XtX)
 
 
 class BlockedLinearRegression(LinearModel):

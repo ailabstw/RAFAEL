@@ -1,5 +1,4 @@
 import os
-os.environ['JAX_ENABLE_X64'] = "True"
 import sys
 import uuid
 from pathlib import Path

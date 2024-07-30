@@ -79,9 +79,7 @@ class QuantitativeGWASTestCase(unittest.TestCase):
             "qc_output_path": "/tmp/qc",
             "regression_save_dir": "/tmp/glm",
             "pheno_name": "pheno",
-            "impute_cov": False,
-            "block_size": 51,
-            "num_core": 2
+            "impute_cov": False
         }
         
         cls.ans_prefix = os.path.join(cls.config["regression_save_dir"], "ans")
@@ -108,8 +106,8 @@ class QuantitativeGWASTestCase(unittest.TestCase):
         
         # save GLM
         self.Output.regression_results(
-            snp_info, t_stats[:, 1], pvals[:, 1],
-            beta.view().reshape(*t_stats.shape)[:, 1],
+            snp_info, t_stats[:, 0], pvals[:, 0],
+            beta.view().reshape(*t_stats.shape)[:, 0],
             nobs, self.config["regression_save_dir"]
         )
         result = os.path.join(self.config["regression_save_dir"], 'gwas.glm')
@@ -158,8 +156,8 @@ class QuantitativeGWASTestCase(unittest.TestCase):
         
         # save GLM
         self.Output.regression_results(
-            snp_info, t_stats[:, 1], pvals[:, 1],
-            beta.view().reshape(*t_stats.shape)[:, 1],
+            snp_info, t_stats[:, 0], pvals[:, 0],
+            beta.view().reshape(*t_stats.shape)[:, 0],
             nobs, self.config["regression_save_dir"]
         )
         result = os.path.join(self.config["regression_save_dir"], 'gwas.glm')
@@ -214,8 +212,6 @@ class BinaryGWASTestCase(unittest.TestCase):
             "regression_save_dir": "/tmp/glm",
             "pheno_name": "pheno",
             "impute_cov": False,
-            "block_size": 51,
-            "num_core": 2,
             "max_iterations": 16
         }
         
@@ -338,18 +334,16 @@ def _test_quantitative_gwas(usecase, config):
     )
     
     # calculate XtX and Xty
-    XtX, Xty, nmodels = usecase.local_calculate_covariances(
-        genotype, covariates, phenotype, 
-        config["block_size"], config["num_core"]
+    XtX, Xty = usecase.local_calculate_covariances(
+        genotype, covariates, phenotype
     )
     
     # calculate beta
-    beta = usecase.global_fit_model([XtX, ], [Xty, ], nmodels)
+    beta = usecase.global_fit_model([XtX, ], [Xty, ])
     
     # calculate SSE and number of observations
     sse, nobs = usecase.local_sse_and_obs(
-        beta, phenotype, genotype, covariates,
-        config["block_size"], config["num_core"]
+        beta, phenotype, genotype, covariates
     )
 
     # calculate t-statistics and p-values
