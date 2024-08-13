@@ -1795,6 +1795,13 @@ class RandomizedSVD(UseCase):
         """
         U = gwasprs.linalg.decompose_U_stack(Us)
         return U
+    
+    @staticmethod
+    @jit
+    def _compute_local_covariance(A, U):
+        P = gwasprs.linalg.create_proxy_matrix(A, U)
+        PPt = gwasprs.linalg.covariance_from_proxy_matrix(P)
+        return P, PPt
 
     def compute_local_covariance(self, A, U):
         """
@@ -1815,9 +1822,7 @@ class RandomizedSVD(UseCase):
         PPt : np.array
             The proxy covariance matrix in shape (k1*I, k1*I).
         """
-        P = gwasprs.linalg.create_proxy_matrix(A, U)
-        PPt = gwasprs.linalg.covariance_from_proxy_matrix(P)
-        return P, PPt
+        return self._compute_local_covariance(A, U)
 
     def decompose_global_covariance(self, PPt, k2):
         """

@@ -203,7 +203,7 @@ def inv(X):
         # fallback
         return np.linalg.inv(X + np.finfo(X.dtype).eps)
 
-
+@jit
 def batched_vdot(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Batched vector-vector dot product
 
@@ -476,7 +476,7 @@ def check_eigenvector_convergence(current, previous, tolerance, required=None):
         col = col + 1
     return converged, deltas
 
-
+@jit
 def update_Us(U, Us, current_iteration):
     Us.append(U)
     return U, Us, current_iteration + 1
@@ -498,7 +498,7 @@ def init_rand_U(m, k1):
     prev_U = randn(m, k1)
     return prev_U
 
-
+@jit
 def update_local_U(A, V):
     """Update U matrix in edge
 
@@ -533,7 +533,7 @@ def orthonormalize(M):
     S = abs(jnp.diag(S))
     return M, S
 
-
+@jit
 def update_local_V(A, U):
     """Update V matrix in edge
 
@@ -568,7 +568,7 @@ def decompose_U_stack(Us):
     U, _, _ = svd(Us)
     return U
 
-
+@jit
 def create_proxy_matrix(A, U):
     """Calculate proxy matrix P
 
@@ -587,7 +587,7 @@ def create_proxy_matrix(A, U):
     P = mmdot(U, A)
     return P
 
-
+@jit
 def covariance_from_proxy_matrix(P):
     """Calculate covariance matrix from proxy matrix
 
@@ -603,7 +603,7 @@ def covariance_from_proxy_matrix(P):
     cov = mmdot(P.T, P.T)
     return cov
 
-
+@jit
 def local_V_from_proxy_matrix(P, Vp):
     """Update V matrix
 
