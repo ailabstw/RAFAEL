@@ -2833,8 +2833,8 @@ class Output(UseCase):
         if not os.path.exists(cox_save_dir):
             os.makedirs(cox_save_dir)
 
-        stats_summary = stats_summary.sort_values("coef")
         stats_summary.to_csv(os.path.join(cox_save_dir, "rafael.cox.stats.summary.csv"))
+        stats_summary = stats_summary.sort_values("coef")
 
         plt.figure(figsize=(8, 6))
 
