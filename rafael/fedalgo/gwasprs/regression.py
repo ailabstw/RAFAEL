@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from functools import partial
 
 import numpy as np
 from jax import numpy as jnp
@@ -389,6 +390,15 @@ class LogisticRegression(LinearModel):
         self, X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
     ):
         return linalg.logistic_loglikelihood(y, self.predict(X))
+    
+    @partial(jit, static_argnums=(0,))
+    def update(self, X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"):
+        pred_y = self.predict(X)
+        residual = y - pred_y
+        gradient = linalg.mvmul(X.T, residual)
+        hessian = linalg.logistic_hessian(X, pred_y)
+        loglikelihood = linalg.logistic_loglikelihood(y, pred_y)
+        return gradient, hessian, loglikelihood
 
     def beta(self, gradient, hessian, solver=linalg.CholeskySolver()):
         # solver calculates H^-1 grad in faster way
@@ -396,37 +406,11 @@ class LogisticRegression(LinearModel):
 
 
 class BatchedLogisticRegression(LinearModel):
-    def __init__(self, beta=None, acceleration="single") -> None:
+    def __init__(self, beta=None) -> None:
         self.__beta = beta
-        self.acceleration = acceleration
 
     def predict(self, X):
-        if self.acceleration == "single":
-            return 1 / (1 + jnp.exp(-linalg.batched_mvmul(X, self.__beta)))
-
-        elif self.acceleration == "pmap":
-            pmap_func = pmap(
-                linalg.batched_logistic_predict, in_axes=(0, 0), out_axes=0
-            )
-            ncores = utils.jax_dev_count()
-            batch, nsample, ndims = X.shape
-            minibatch, remainder = divmod(batch, ncores)
-            A = jnp.reshape(
-                X[: (minibatch * ncores), :, :], (ncores, minibatch, nsample, ndims)
-            )
-            a = jnp.reshape(
-                self.__beta[: (minibatch * ncores), :], (ncores, minibatch, ndims)
-            )
-            Y = jnp.reshape(pmap_func(A, a), (-1, nsample))
-
-            if remainder != 0:
-                B = X[(minibatch * ncores) :, :, :]
-                b = self.__beta[(minibatch * ncores) :, :]
-                Z = linalg.batched_logistic_predict(B, b)
-                Y = jnp.concatenate((Y, Z), axis=0)
-            return Y
-        else:
-            raise ValueError(f"{self.acceleration} acceleration is not supported.")
+        return 1 / (1 + jnp.exp(-linalg.batched_mvmul(X, self.__beta)))
 
     def fit(self, X, y):
         grad = self.gradient(X, y)
@@ -444,6 +428,15 @@ class BatchedLogisticRegression(LinearModel):
 
     def loglikelihood(self, X, y):
         return linalg.batched_logistic_loglikelihood(y, self.predict(X))
+    
+    @partial(jit, static_argnums=(0,))
+    def update(self, X, y):
+        pred_y = self.predict(X)
+        residual = linalg.batched_logistic_residual(y, pred_y)
+        gradient = linalg.batched_logistic_gradient(X, residual)
+        hessian = linalg.batched_logistic_hessian(X, pred_y)
+        loglikelihood = linalg.batched_logistic_loglikelihood(y, pred_y)
+        return gradient, hessian, loglikelihood
 
     def beta(self, gradient, hessian, solver=linalg.BatchedCholeskySolver()):
         try:

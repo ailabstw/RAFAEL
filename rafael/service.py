@@ -1329,9 +1329,6 @@ class ClientService(ServiceController):
     async def gwas_logistic_update_local_params(self, beta: jnp.array, config: datamodel.GWASConfig):
         t = time.perf_counter_ns()
         gradient, hessian, loglikelihood, current_iteration, _ = self.binary_gwas.local_iter_params(
-            self.repo.get("genotype"),
-            self.repo.get("cov_values"),
-            self.repo.get("y"),
             beta,
             self.repo.get("current_iteration")
         )

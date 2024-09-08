@@ -749,29 +749,6 @@ class LinearRegression(UseCase):
         return t_stat, pval
 
 
-""" Logistic Helper Functions """
-
-
-# @jit
-# def preprocess_x_y(genotype, covariates, phenotype):
-#     genotype = jnp.expand_dims(genotype, axis=-1)
-#     X = jnp.concatenate((genotype, covariates), axis=1)
-#     mask = jnp.expand_dims(gwasprs.mask.isnonnan(X, axis=1), -1)
-#     X_mask = gwasprs.impute_with(X) * mask
-#     Y_mask = phenotype * jnp.squeeze(mask)
-
-#     # Set the max value to 1, else to 0
-#     max_value = jnp.max(Y_mask)
-#     Y_mask = jnp.where(Y_mask == max_value, 1, 0)
-
-#     return X_mask, Y_mask
-
-
-# @jit
-# def generate_Xy(GT, covariates, phenotype):
-#     return vmap(preprocess_x_y, (1, None, None), (0, 0))(GT, covariates, phenotype)
-
-
 def converged(prev_loglikelihood, loglikelihood, threshold=1e-4):
     if jnp.isnan(prev_loglikelihood).all():
         return False
@@ -791,6 +768,9 @@ class BinaryGWAS(UseCase):
     This work is inspired by the work of sPLINK,
     see https://github.com/tum-aimed/splink.
     """
+    
+    X = None
+    y = None
 
     def __init__(self):
         super().__init__()
@@ -923,16 +903,14 @@ class BinaryGWAS(UseCase):
             covariates = jnp.ones((genotype.shape[0], 1))
         else:
             covariates = jnp.array(gwasprs.regression.add_bias(covariates))
-        X, y = generate_Xy(genotype, covariates, phenotype)
+        self.X, self.y = generate_Xy(genotype, covariates, phenotype, True)
         beta = jnp.zeros((genotype.shape[1], covariates.shape[1] + 1))
         n_obs = gwasprs.mask.nonnan_count(genotype)  # used in output file
         current_iteration = 0
 
         # Update the parameters
         model = gwasprs.regression.BatchedLogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = model.update(self.X, self.y)
         current_iteration += 1
         return n_obs, gradient, hessian, loglikelihood, current_iteration
 
@@ -1018,19 +996,15 @@ class BinaryGWAS(UseCase):
         return beta, prev_beta, prev_loglikelihood, inv_hessian, jump_to
 
     def local_iter_params(
-        self, genotype, covariates, phenotype, beta, current_iteration
+        self,
+        beta, 
+        current_iteration
     ):
         """
         Update local parameters from global beta
 
         Parameters
         ----------
-        genotype : np.array
-            Genotype matrix in shape (n_sample, n_SNP).
-        covariates : np.array
-            Covariate matrix in shape (n_sample, n_covariate).
-        phenotype : np.array
-            Phenotype vector in shape (n_sample,).
         beta : np.array
             Global beta matrix in shape (n_SNP, n_covariate+2).
         current_iteration : int
@@ -1049,17 +1023,9 @@ class BinaryGWAS(UseCase):
         jump_to : str
             'global_params' to update global parameters.
         """
-        if covariates is None:
-            covariates = jnp.ones((genotype.shape[0], 1))
-        else:
-            covariates = jnp.array(gwasprs.regression.add_bias(covariates))
-        X, y = generate_Xy(genotype, covariates, phenotype)
-
         # Update the parameters
         model = gwasprs.regression.BatchedLogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = model.update(self.X, self.y)
         current_iteration += 1
         jump_to = "global_params"
         return gradient, hessian, loglikelihood, current_iteration, jump_to
@@ -1084,8 +1050,6 @@ class BinaryGWAS(UseCase):
         beta : np.array
             Global beta vector in shape (n_SNP,).
         """
-        beta = beta.astype('float64')
-        inv_hessian = inv_hessian.astype('float64')
         t_stat, pval = gwasprs.stats.batched_logistic_stats(beta, inv_hessian)
         return t_stat[:, 0], pval[:, 0], beta[:, 0]
 
