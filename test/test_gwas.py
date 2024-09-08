@@ -370,10 +370,7 @@ def _test_binary_gwas(usecase, config):
         if jump_to == 'global_stats':
             break
         
-        gradient, hessian, loglikelihood, current_iteration, _ = usecase.local_iter_params(
-            genotype, covariates, phenotype,
-            beta, current_iteration
-        )
+        gradient, hessian, loglikelihood, current_iteration, _ = usecase.local_iter_params(beta, current_iteration)
         
     t_stats, pvals, beta = usecase.global_stats(beta, inv_hessian)
     
