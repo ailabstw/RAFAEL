@@ -350,24 +350,19 @@ class CholeskySolver(LinearSolver):
     def __call__(
         self, X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
     ):
+        # Add machine eps to avoid zeros in matrix and increase numerical stability
         if isinstance(X, jax.Array):
-            # L = Cholesky(X)
-            # Add machine eps to avoid zeros in matrix and increase numerical stability
-            L = jnp.linalg.cholesky(X + np.finfo(X.dtype).eps)
-            # solve Lz = y
-            z = jsp.linalg.solve_triangular(L, y, lower=True)
-            # solve Lt beta = z
-            return jsp.linalg.solve_triangular(L, z, trans="T", lower=True)
+            return _cholesky_solver(X + np.finfo(X.dtype).eps, y)
+
         elif isinstance(X, (np.ndarray, np.generic)):
-            # Add machine eps to avoid zeros in matrix and increase numerical stability
             c, low = slinalg.cho_factor(X + np.finfo(X.dtype).eps)
             return slinalg.cho_solve((c, low), y)
+
         elif isinstance(X, block.BlockDiagonalMatrix):
             start = 0
             res = np.empty(X.shape[0])
             for A in X:
                 d = A.shape[1]
-                # Add machine eps to avoid zeros in matrix and increase numerical stability
                 c, low = slinalg.cho_factor(A + np.finfo(A.dtype).eps)
                 x = slinalg.cho_solve((c, low), y.view()[start : start + d])
                 res.view()[start : start + d] = x
@@ -378,7 +373,7 @@ class CholeskySolver(LinearSolver):
 
 
 @jit
-def _batched_cholesky_solver(X: ArrayLike, y:ArrayLike) -> ArrayLike:
+def _cholesky_solver(X: ArrayLike, y:ArrayLike) -> ArrayLike:
     L = batched_cholesky(X)
     z = batched_solve_lower_triangular(L, y)
     return batched_solve_trans_lower_triangular(L, z)
@@ -393,7 +388,7 @@ class BatchedCholeskySolver(LinearSolver):
         X: ArrayLike,
         y: ArrayLike,
     ) -> ArrayLike:
-        return _batched_cholesky_solver(X, y)
+        return _cholesky_solver(X, y)
 
 
 class QRSolver(LinearSolver):
