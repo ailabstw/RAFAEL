@@ -401,10 +401,10 @@ class ServerService(ServiceController):
         await self.request_clients(
             "gwas_write_logistic_glm",
             config, 
-            beta=('JNPArray', self.repo.pop("logistic_reg_beta")),
-            t_stat=('JNPArray', self.repo.pop("t_stat")),
-            pval=('JNPArray', self.repo.pop("pval")),
-            n_obs=('JNPArray', self.repo.pop("n_obs")),
+            beta=('NPArray', self.repo.pop("logistic_reg_beta")),
+            t_stat=('NPArray', self.repo.pop("t_stat")),
+            pval=('NPArray', self.repo.pop("pval")),
+            n_obs=('NPArray', self.repo.pop("n_obs")),
         )
         return datamodel.Status(status="OK")
     
