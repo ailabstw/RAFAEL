@@ -39,7 +39,7 @@ pipeline:
     - "update_local_U"
     - "update_global_U"
   Output:
-    - "pca_results"
+    - "svd_results"
 
 
 config:
@@ -49,7 +49,7 @@ config:
   cov_path: "data/whole/hapmap1_100.cov"
   impute_cov: False
   qc_output_path: "/tmp/agg"
-  pc_save_dir: "/tmp/pca"
+  svd_save_dir: "/tmp/pca"
   batch_size: 51
   num_core: 2
   maf: 0.05
