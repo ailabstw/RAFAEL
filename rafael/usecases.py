@@ -909,8 +909,7 @@ class BinaryGWAS(UseCase):
         current_iteration = 0
 
         # Update the parameters
-        model = gwasprs.regression.BatchedLogisticRegression(beta)
-        gradient, hessian, loglikelihood = model.update(self.X, self.y)
+        gradient, hessian, loglikelihood = gwasprs.regression.BatchedLogisticRegression.update(beta, self.X, self.y)
         current_iteration += 1
         return n_obs, gradient, hessian, loglikelihood, current_iteration
 
@@ -1024,8 +1023,7 @@ class BinaryGWAS(UseCase):
             'global_params' to update global parameters.
         """
         # Update the parameters
-        model = gwasprs.regression.BatchedLogisticRegression(beta)
-        gradient, hessian, loglikelihood = model.update(self.X, self.y)
+        gradient, hessian, loglikelihood = gwasprs.regression.BatchedLogisticRegression.update(beta, self.X, self.y)
         current_iteration += 1
         jump_to = "global_params"
         return gradient, hessian, loglikelihood, current_iteration, jump_to
@@ -1143,10 +1141,7 @@ class LogisticRegression(UseCase):
 
         # Initialize logistic regression
         beta = np.zeros((X.shape[1],))
-        model = gwasprs.regression.LogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = gwasprs.regression.LogisticRegression.update(beta, X, y)
         current_iteration = 1
 
         return X, y, gradient, hessian, loglikelihood, current_iteration
@@ -1255,10 +1250,7 @@ class LogisticRegression(UseCase):
         jump_to : str
             'global_params' to update global parameters.
         """
-        model = gwasprs.regression.LogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = gwasprs.regression.LogisticRegression.update(beta, X, y)
         current_iteration += 1
         jump_to = "global_params"
         return gradient, hessian, loglikelihood, current_iteration, jump_to

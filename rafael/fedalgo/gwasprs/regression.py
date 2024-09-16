@@ -359,6 +359,16 @@ class BlockedLinearRegression(LinearModel):
         return t_stat
 
 
+@jit
+def _logistic_update(beta, X, y):
+    pred_y = linalg.logistic_predict(X, beta)
+    residual = y - pred_y
+    gradient = linalg.mvmul(X.T, residual)
+    hessian = linalg.logistic_hessian(X, pred_y)
+    loglikelihood = linalg.logistic_loglikelihood(y, pred_y)
+    return gradient, hessian, loglikelihood
+
+
 class LogisticRegression(LinearModel):
     def __init__(self, beta=None) -> None:
         self.__beta = beta
@@ -390,19 +400,24 @@ class LogisticRegression(LinearModel):
         self, X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
     ):
         return linalg.logistic_loglikelihood(y, self.predict(X))
-    
-    @partial(jit, static_argnums=(0,))
-    def update(self, X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"):
-        pred_y = self.predict(X)
-        residual = y - pred_y
-        gradient = linalg.mvmul(X.T, residual)
-        hessian = linalg.logistic_hessian(X, pred_y)
-        loglikelihood = linalg.logistic_loglikelihood(y, pred_y)
-        return gradient, hessian, loglikelihood
+
+    @staticmethod
+    def update(beta, X, y):
+        return _logistic_update(beta, X, y)
 
     def beta(self, gradient, hessian, solver=linalg.CholeskySolver()):
         # solver calculates H^-1 grad in faster way
         return self.__beta + solver(hessian, gradient)
+
+
+@jit
+def _logistic_batched_update(beta, X, y):
+    pred_y = 1 / (1 + jnp.exp(-linalg.batched_mvmul(X, beta)))
+    residual = linalg.batched_logistic_residual(y, pred_y)
+    gradient = linalg.batched_logistic_gradient(X, residual)
+    hessian = linalg.batched_logistic_hessian(X, pred_y)
+    loglikelihood = linalg.batched_logistic_loglikelihood(y, pred_y)
+    return gradient, hessian, loglikelihood
 
 
 class BatchedLogisticRegression(LinearModel):
@@ -428,15 +443,10 @@ class BatchedLogisticRegression(LinearModel):
 
     def loglikelihood(self, X, y):
         return linalg.batched_logistic_loglikelihood(y, self.predict(X))
-    
-    @partial(jit, static_argnums=(0,))
-    def update(self, X, y):
-        pred_y = self.predict(X)
-        residual = linalg.batched_logistic_residual(y, pred_y)
-        gradient = linalg.batched_logistic_gradient(X, residual)
-        hessian = linalg.batched_logistic_hessian(X, pred_y)
-        loglikelihood = linalg.batched_logistic_loglikelihood(y, pred_y)
-        return gradient, hessian, loglikelihood
+
+    @staticmethod
+    def update(beta, X, y):
+        return _logistic_batched_update(beta, X, y)
 
     def beta(self, gradient, hessian, solver=linalg.BatchedCholeskySolver()):
         try:
