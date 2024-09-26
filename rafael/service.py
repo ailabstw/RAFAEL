@@ -1357,7 +1357,7 @@ class ClientService(ServiceController):
             current_iteration=('int', current_iteration)
         )
         
-    async def gwas_write_logistic_glm(self, beta: jnp.array, t_stat: jnp.array, pval: jnp.array,
+    async def gwas_write_logistic_glm(self, beta: np.array, t_stat: np.array, pval: np.array,
                                       n_obs: jnp.array, config: datamodel.GWASConfig):
         self.output.regression_results(
             self.repo.get("snp_info"), t_stat, pval, beta, n_obs, config.regression_save_dir
