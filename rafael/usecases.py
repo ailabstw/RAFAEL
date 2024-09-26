@@ -360,6 +360,8 @@ class CovarProcessor(UseCase):
 
 
         if cov is not None:
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
             cov_path = os.path.join(save_dir,'stdz.merged.cov')
             cov.to_csv(f"{cov_path}", sep='\t', index=None)
             return cov_path
