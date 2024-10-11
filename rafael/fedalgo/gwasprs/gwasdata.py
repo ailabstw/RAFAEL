@@ -233,6 +233,7 @@ class GWASData:
         self.__phenotype = phenotype
         self.__snp = snp
         self.__covariate = covariate
+        self.ensure_sample_order()
 
     @classmethod
     def read(cls, bfile_path, cov_path=None, pheno_path=None, pheno_name="PHENO1"):
@@ -303,6 +304,10 @@ class GWASData:
         self.__genotype = redirect_genotype(
             self.__genotype, sorted_snp_idx
         )  # This step consts lots of time
+
+    def ensure_sample_order(self):
+        if self.__covariate is not None:
+            self.__covariate = format_cov(self.__covariate, self.__phenotype)
 
     @property
     def phenotype(self):
