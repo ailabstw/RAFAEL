@@ -377,6 +377,11 @@ def _cholesky_solver(X: ArrayLike, y:ArrayLike) -> ArrayLike:
     L = batched_cholesky(X)
     z = batched_solve_lower_triangular(L, y)
     return batched_solve_trans_lower_triangular(L, z)
+
+@jit
+def _qr_solver(X, y):
+    Q, R = jnp.linalg.qr(X)
+    return jsp.linalg.solve(R, batched_mvdot(Q, y), lower=False)
     
     
 class BatchedCholeskySolver(LinearSolver):
@@ -402,6 +407,14 @@ class QRSolver(LinearSolver):
         Q, R = jnp.linalg.qr(X)
         # solve R beta = Qty
         return jsp.linalg.solve(R, mvdot(Q, y), lower=False)
+
+
+class BatchedQRSolver(LinearSolver):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def __call__(self, X, y):
+        return _qr_solver(X, y)
 
 
 @jit
