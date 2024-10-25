@@ -40,6 +40,7 @@ class ServiceController(AbstractController):
         # Use Cases
         self.qc = usecases.BasicBfileQC()
         self.ld = usecases.NaiveLDPruning()
+        # self.ld = usecases.SfkitLDFiltering()
         self.cov = usecases.CovarProcessor()
         self.quant_gwas = usecases.QuantitativeGWAS()
         self.binary_gwas = usecases.BinaryGWAS()
@@ -1052,8 +1053,8 @@ class ClientService(ServiceController):
             bfile_path = config.bfile_path
         
         remained_snps = self.ld.local_ldprune(
-            bfile_path,
-            f'{config.local_qc_output_path}.ld',
+            bfile_path=bfile_path,
+            out_path=f'{config.local_qc_output_path}.ld',
             win_size=config.win_size,
             step=config.step,
             r2=config.r2,
