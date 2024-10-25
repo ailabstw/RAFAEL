@@ -3055,3 +3055,42 @@ class NaiveLDPruning(UseCase):
         """
         out_path = gwasprs.ld.extract_snps(bfile_path, out_path, snp_list)
         return out_path
+
+
+class SfkitLDFiltering(NaiveLDPruning):
+    def local_ldprune(
+        self,
+        bfile_path: str,
+        win_size: int = 100000,
+        **kwargs
+    ) -> NDArray:
+        """
+        Run LD prune by plink2
+
+        Parameters
+        ----------
+        bfile_path : str
+            input bfile prefix
+        win_size: int
+            the LD distance threshold in sfkit
+
+        Returns
+        -------
+        snp_list : list
+            The list of snp ids after ld purne.
+        """
+        bim = gwasprs.gwasdata.BimReader(bfile_path).read()
+        snp_list = []
+        prev_pos = 0
+        prev_chrom = None
+        for chrom, snp, pos in zip(bim["CHR"], bim["ID"], bim["POS"]):
+            if prev_chrom is None:
+                prev_chrom = chrom
+            elif prev_chrom != chrom:
+                prev_chrom = chrom
+                prev_pos = 0
+            if prev_pos == 0 or pos >= prev_pos + win_size:
+                snp_list.append(snp)
+                prev_pos = pos
+        return np.array(snp_list)
+    
