@@ -4,14 +4,14 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "rafael"
-version = "0.0.0"
+version = "0.1.0"
 description = "A federated analysis framework for bioinformatics analysis"
 readme = "README.md"
 
 authors = [
     "Jian-Hung Wen <jianhung.wen@ailabs.tw>",
-    "Yueh-Hua Tu <yuehhua.tu@ailabs.tw>",
-    "Yi-Lun Lee <yilun.lee@ailabs.tw>"
+    "Yi-Lun Lee <yilun.lee@ailabs.tw>",
+    "Yueh-Hua Tu <yuehhua.tu@ailabs.tw>"
 ]
 
 classifiers = [
