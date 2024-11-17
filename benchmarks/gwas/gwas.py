@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from gwasprs import gwasplot
+from rafael.fedalgo.gwasprs import gwasplot
 
 """
 This script is used to generate the ground truth answers,

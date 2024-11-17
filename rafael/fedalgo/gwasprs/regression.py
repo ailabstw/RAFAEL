@@ -1,8 +1,9 @@
 from abc import ABCMeta
+from functools import partial
 
 import numpy as np
 from jax import numpy as jnp
-from jax import pmap
+from jax import jit, pmap
 from scipy.sparse import issparse
 
 from . import linalg, stats, utils, block
@@ -207,15 +208,21 @@ class BatchedLinearRegression(LinearModel):
         y: "np.ndarray[(1, 1), np.floating]",
         acceleration="single",
     ):
-        res = self.residual(X, y, acceleration=acceleration)
+        res = self.residual(X, y, acceleration)
         return linalg.batched_vdot(res, res)
+    
+    @staticmethod
+    @jit
+    def _linear_stat(sse, dof, coef, XtX):
+        mse = jnp.expand_dims(jnp.expand_dims(sse / dof, -1), -1)
+        XtXinvs = jnp.linalg.inv(XtX)
+        vars = jnp.diagonal((mse * XtXinvs), axis1=1, axis2=2)
+        std = jnp.sqrt(vars)
+        t_stat = coef / std
+        return t_stat
 
     def t_stats(self, sse, XtX, dof):
-        mse = jnp.expand_dims(jnp.expand_dims(sse / dof, -1), -1)
-        vars = linalg.batched_diagonal(mse * linalg.batched_inv(XtX))
-        std = jnp.sqrt(vars)
-        t_stat = self.coef / std
-        return t_stat
+        return self._linear_stat(sse, dof, self.coef, XtX)
 
 
 class BlockedLinearRegression(LinearModel):
@@ -352,6 +359,16 @@ class BlockedLinearRegression(LinearModel):
         return t_stat
 
 
+@jit
+def _logistic_update(beta, X, y):
+    pred_y = linalg.logistic_predict(X, beta)
+    residual = y - pred_y
+    gradient = linalg.mvmul(X.T, residual)
+    hessian = linalg.logistic_hessian(X, pred_y)
+    loglikelihood = linalg.logistic_loglikelihood(y, pred_y)
+    return gradient, hessian, loglikelihood
+
+
 class LogisticRegression(LinearModel):
     def __init__(self, beta=None) -> None:
         self.__beta = beta
@@ -384,43 +401,31 @@ class LogisticRegression(LinearModel):
     ):
         return linalg.logistic_loglikelihood(y, self.predict(X))
 
+    @staticmethod
+    def update(beta, X, y):
+        return _logistic_update(beta, X, y)
+
     def beta(self, gradient, hessian, solver=linalg.CholeskySolver()):
         # solver calculates H^-1 grad in faster way
         return self.__beta + solver(hessian, gradient)
 
 
+@jit
+def _logistic_batched_update(beta, X, y):
+    pred_y = 1 / (1 + jnp.exp(-linalg.batched_mvmul(X, beta)))
+    residual = linalg.batched_logistic_residual(y, pred_y)
+    gradient = linalg.batched_logistic_gradient(X, residual)
+    hessian = linalg.batched_logistic_hessian(X, pred_y)
+    loglikelihood = linalg.batched_logistic_loglikelihood(y, pred_y)
+    return gradient, hessian, loglikelihood
+
+
 class BatchedLogisticRegression(LinearModel):
-    def __init__(self, beta=None, acceleration="single") -> None:
+    def __init__(self, beta=None) -> None:
         self.__beta = beta
-        self.acceleration = acceleration
 
     def predict(self, X):
-        if self.acceleration == "single":
-            return 1 / (1 + jnp.exp(-linalg.batched_mvmul(X, self.__beta)))
-
-        elif self.acceleration == "pmap":
-            pmap_func = pmap(
-                linalg.batched_logistic_predict, in_axes=(0, 0), out_axes=0
-            )
-            ncores = utils.jax_dev_count()
-            batch, nsample, ndims = X.shape
-            minibatch, remainder = divmod(batch, ncores)
-            A = jnp.reshape(
-                X[: (minibatch * ncores), :, :], (ncores, minibatch, nsample, ndims)
-            )
-            a = jnp.reshape(
-                self.__beta[: (minibatch * ncores), :], (ncores, minibatch, ndims)
-            )
-            Y = jnp.reshape(pmap_func(A, a), (-1, nsample))
-
-            if remainder != 0:
-                B = X[(minibatch * ncores) :, :, :]
-                b = self.__beta[(minibatch * ncores) :, :]
-                Z = linalg.batched_logistic_predict(B, b)
-                Y = jnp.concatenate((Y, Z), axis=0)
-            return Y
-        else:
-            raise ValueError(f"{self.acceleration} acceleration is not supported.")
+        return 1 / (1 + jnp.exp(-linalg.batched_mvmul(X, self.__beta)))
 
     def fit(self, X, y):
         grad = self.gradient(X, y)
@@ -438,6 +443,10 @@ class BatchedLogisticRegression(LinearModel):
 
     def loglikelihood(self, X, y):
         return linalg.batched_logistic_loglikelihood(y, self.predict(X))
+
+    @staticmethod
+    def update(beta, X, y):
+        return _logistic_batched_update(beta, X, y)
 
     def beta(self, gradient, hessian, solver=linalg.BatchedCholeskySolver()):
         try:

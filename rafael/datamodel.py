@@ -261,8 +261,6 @@ class GWASConfig(PlanBaseConfig):
     svd_save_dir: Optional[Union[List[str], str]] = None  # default is local_qc_output_path
     
     # System parameters
-    block_size: Optional[int] = 10000
-    num_core: Optional[int] = 4
     snp_chunk_size: Optional[int] = 10000
 
     def client_bfile_config(self):

@@ -15,7 +15,6 @@ from fastapi.responses import FileResponse
 from aiohttp.web import WebSocketResponse
 
 from rafael.privacy import hyfed
-from rafael.fedalgo.gwasprs.block import BlockDiagonalMatrix
 from rafael.fedalgo.gwasprs.gwasdata import GWASDataIterator
 from rafael.fedalgo.gwasprs.reader import PhenotypeReader
 from .controller import AbstractController
@@ -41,6 +40,7 @@ class ServiceController(AbstractController):
         # Use Cases
         self.qc = usecases.BasicBfileQC()
         self.ld = usecases.NaiveLDPruning()
+        # self.ld = usecases.SfkitLDFiltering()
         self.cov = usecases.CovarProcessor()
         self.quant_gwas = usecases.QuantitativeGWAS()
         self.binary_gwas = usecases.BinaryGWAS()
@@ -273,21 +273,16 @@ class ServerService(ServiceController):
     async def gwas_fit_linear_model(self, config: datamodel.GWASConfig):
         results = await self.request_clients('gwas_calculate_covariance', config)
 
-        assert all(n == results.n_model[0] for n in results.n_model), "Incorrect number of SNPs."
-        n_model = results.n_model[0]
-        if n_model != 0:
+        if not isinstance(results.XtX[0], list):
             t = time.perf_counter_ns()
             # Get the noise from compensator 
             noise = await self.request_compensators(config, 'XtX', 'Xty')
             
             # Denoise
-            XtX = BlockDiagonalMatrix(list(np.sum(results.XtX, axis=0) - noise.XtX))
-            Xty = np.sum(results.Xty, axis=0) - noise.Xty.reshape(-1)
-            
-            beta = self.quant_gwas.global_fit_model(XtX, Xty, n_model)
+            XtX = np.sum(results.XtX, axis=0) - noise.XtX
+            Xty = np.sum(results.Xty, axis=0) - noise.Xty
 
-            # XtX = list(map(lambda x: BlockDiagonalMatrix(x), results.XtX))
-            # beta = self.quant_gwas.global_fit_model(XtX, results.Xty, n_model)
+            beta = self.quant_gwas.global_fit_model(XtX, Xty)
 
             self.logger.info(f"Server - global_fit_model: {time.perf_counter_ns() - t} ns")
             self.repo.add("linear_reg_beta", beta)
@@ -296,7 +291,7 @@ class ServerService(ServiceController):
             return datamodel.Status(status="END")
 
     async def gwas_linear_stats(self, config: datamodel.GWASConfig):
-        results = await self.request_clients('gwas_calculate_sse_and_obs', config, beta=('NPArray', self.repo.get("linear_reg_beta")))
+        results = await self.request_clients('gwas_calculate_sse_and_obs', config, beta=('JNPArray', self.repo.get("linear_reg_beta")))
 
         t = time.perf_counter_ns()
 
@@ -308,8 +303,7 @@ class ServerService(ServiceController):
         n_obs = np.sum(results.n_obs, axis=0)
         
         t_stat, pval = self.quant_gwas.global_stats(sse, n_obs)
-        
-        # t_stat, pval = self.quant_gwas.global_stats(results.sse, results.n_obs)
+
         self.logger.info(f"Server - t_stats: {time.perf_counter_ns() - t} ns")
 
         self.repo.add("t_stat", t_stat)
@@ -408,10 +402,10 @@ class ServerService(ServiceController):
         await self.request_clients(
             "gwas_write_logistic_glm",
             config, 
-            beta=('JNPArray', self.repo.pop("logistic_reg_beta")),
-            t_stat=('JNPArray', self.repo.pop("t_stat")),
-            pval=('JNPArray', self.repo.pop("pval")),
-            n_obs=('JNPArray', self.repo.pop("n_obs")),
+            beta=('NPArray', self.repo.pop("logistic_reg_beta")),
+            t_stat=('NPArray', self.repo.pop("t_stat")),
+            pval=('NPArray', self.repo.pop("pval")),
+            n_obs=('NPArray', self.repo.pop("n_obs")),
         )
         return datamodel.Status(status="OK")
     
@@ -1059,8 +1053,8 @@ class ClientService(ServiceController):
             bfile_path = config.bfile_path
         
         remained_snps = self.ld.local_ldprune(
-            bfile_path,
-            f'{config.local_qc_output_path}.ld',
+            bfile_path=bfile_path,
+            out_path=f'{config.local_qc_output_path}.ld',
             win_size=config.win_size,
             step=config.step,
             r2=config.r2,
@@ -1198,53 +1192,46 @@ class ClientService(ServiceController):
             pbar.update(1)
 
             t = time.perf_counter_ns()
-            XtX, Xty, n_model = self.quant_gwas.local_calculate_covariances(
+            XtX, Xty = self.quant_gwas.local_calculate_covariances(
                 dataset[0],  # genotype
                 dataset[1],  # covariates
                 dataset[2],  # phenotype
-                config.block_size,
-                config.num_core
             )
             self.logger.info(f"Client - local_calculate_covariances: {time.perf_counter_ns() - t} ns")
 
             # Add noise
-            XtX_noise = list(map(lambda x: hyfed.randn(*x.shape), XtX))
-            Xty_noise = list(map(lambda x: hyfed.randn(*x.shape), Xty))
-            XtX = BlockDiagonalMatrix(list(map(lambda i: XtX[i]+XtX_noise[i], range(len(XtX_noise)))))
-            Xty += np.concatenate(Xty_noise)
+            XtX_noise = hyfed.randn(*XtX.shape)
+            Xty_noise = hyfed.randn(*Xty.shape)
+            XtX += XtX_noise
+            Xty += Xty_noise
 
             self.repo.add("y", dataset[2])
             self.repo.add("cov_values", dataset[1])
             self.repo.add("genotype", dataset[0])
             self.repo.add("snp_info", dataset[4])
-            self.repo.add("n_model", n_model)
             self.repo.add("QuantitativeGWAS", loader)
             self.repo.add("pbar", pbar)
             self.noise.add("XtX", XtX_noise)
             self.noise.add("Xty", Xty_noise)
 
             return send_model(
-                XtX=('List[NPArray]', XtX),
-                Xty=('NPArray', Xty),
-                n_model=('int', n_model)
+                XtX=('JNPArray', XtX),
+                Xty=('JNPArray', Xty)
             )
         else:
 
             return send_model(
                 XtX=('list', []),
-                Xty=('list', []),
-                n_model=('int', 0)
+                Xty=('list', [])
             )
 
-    async def gwas_calculate_sse_and_obs(self, beta: np.array, config: datamodel.GWASConfig):
+    async def gwas_calculate_sse_and_obs(self, beta: jnp.array, config: datamodel.GWASConfig):
         t = time.perf_counter_ns()
         sse, n_obs = self.quant_gwas.local_sse_and_obs(
             beta,
             self.repo.get("y"),
             self.repo.pop("genotype"),
-            self.repo.get("cov_values"),
-            config.block_size,
-            config.num_core
+            self.repo.get("cov_values")
         )
         
         sse_noise = hyfed.randn(*sse.shape)
@@ -1255,18 +1242,17 @@ class ClientService(ServiceController):
         self.logger.info(f"Client - local_sse_and_obs: {time.perf_counter_ns() - t} ns")
 
         return send_model(
-            sse=('NPArray', sse),
-            n_obs=('NPArray', n_obs)
+            sse=('JNPArray', sse),
+            n_obs=('JNPArray', n_obs)
         )
     
     async def gwas_write_glm(self, t_stat: np.array, pval: np.array, n_obs: np.array, config: datamodel.GWASConfig):
         beta = self.repo.get("beta")
-        n_model = self.repo.get("n_model")
 
         # Extract SNP statistics
-        beta = beta.view().reshape(n_model, -1)[:,1]
-        t_stat = t_stat.view()[:,1]
-        pval = pval.view()[:,1]
+        beta = beta.view()[:,0]
+        t_stat = t_stat.view()[:,0]
+        pval = pval.view()[:,0]
 
         self.output.regression_results(
             self.repo.get("snp_info"), t_stat, pval, beta, n_obs, config.regression_save_dir
@@ -1344,9 +1330,6 @@ class ClientService(ServiceController):
     async def gwas_logistic_update_local_params(self, beta: jnp.array, config: datamodel.GWASConfig):
         t = time.perf_counter_ns()
         gradient, hessian, loglikelihood, current_iteration, _ = self.binary_gwas.local_iter_params(
-            self.repo.get("genotype"),
-            self.repo.get("cov_values"),
-            self.repo.get("y"),
             beta,
             self.repo.get("current_iteration")
         )
@@ -1375,7 +1358,7 @@ class ClientService(ServiceController):
             current_iteration=('int', current_iteration)
         )
         
-    async def gwas_write_logistic_glm(self, beta: jnp.array, t_stat: jnp.array, pval: jnp.array,
+    async def gwas_write_logistic_glm(self, beta: np.array, t_stat: np.array, pval: np.array,
                                       n_obs: jnp.array, config: datamodel.GWASConfig):
         self.output.regression_results(
             self.repo.get("snp_info"), t_stat, pval, beta, n_obs, config.regression_save_dir

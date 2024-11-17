@@ -8,6 +8,7 @@ from jax import jit, vmap
 from jax import numpy as jnp
 from jax import scipy as jsp
 from jax import random as jrand
+from jax.typing import ArrayLike
 
 from . import stats, aggregations, block
 from .project import FederatedGramSchmidt
@@ -18,6 +19,10 @@ def nansum(A):
     non_na_count = jnp.count_nonzero(~jnp.isnan(A))
     return snp_sum, non_na_count
 
+
+@jit
+def _jaxmvdot(X, y):
+    return X.T @ y
 
 def mvdot(
     X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
@@ -46,10 +51,14 @@ def mvdot(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(y, jax.Array):
-            return jit(vmap(jnp.vdot, (1, None), 0))(X, y)
+            return _jaxmvdot(X, y)
         else:
             return X.T @ y
 
+
+@jit
+def _jaxmvmul(X, y):
+    return X @ y
 
 def mvmul(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -83,10 +92,14 @@ def mvmul(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(y, jax.Array):
-            return jit(vmap(jnp.vdot, (0, None), 0))(X, y)
+            return _jaxmvmul(X, y)
         else:
             return X @ y
 
+
+@jit
+def _jaxmmdot(X, Y):
+    return X.T @ Y
 
 def mmdot(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -124,10 +137,14 @@ def mmdot(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(Y, jax.Array):
-            return jit(vmap(mvmul, (None, 1), 1))(X.T, Y)
+            return _jaxmmdot(X, Y)
         else:
             return X.T @ Y
 
+
+@jit
+def _jaxmatmul(X, Y):
+    return X @ Y
 
 def matmul(
     X: "np.ndarray[(1, 1), np.floating]",
@@ -163,7 +180,7 @@ def matmul(
     else:
         # fallback
         if isinstance(X, jax.Array) or isinstance(Y, jax.Array):
-            return jit(vmap(mvmul, (None, 1), 1))(X, Y)
+            return _jaxmatmul(X, Y)
         else:
             return X @ Y
 
@@ -186,7 +203,7 @@ def inv(X):
         # fallback
         return np.linalg.inv(X + np.finfo(X.dtype).eps)
 
-
+@jit
 def batched_vdot(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Batched vector-vector dot product
 
@@ -272,35 +289,28 @@ def batched_diagonal(X: np.ndarray) -> np.ndarray:
 
 
 @jit
-def batched_inv(X: np.ndarray) -> np.ndarray:
-    return vmap(jnp.linalg.inv, 0, 0)(X)
-
-
-def batched_cholesky(X: np.ndarray) -> np.ndarray:
-    batch_size = X.shape[0]
-    L = np.empty(X.shape)
-    for b in range(batch_size):
-        L.view()[b, :, :] = np.linalg.cholesky(X[b, :, :])
-    return L
+def batched_inv(X: ArrayLike) -> ArrayLike:
+    return jnp.linalg.inv(X)
 
 
 @jit
-def batched_solve(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return vmap(jsp.linalg.solve, (0, 0), 0)(X, y)
+def batched_cholesky(X: ArrayLike) -> ArrayLike:
+    return jnp.linalg.cholesky(X)
 
 
 @jit
-def batched_solve_lower_triangular(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return vmap(lambda X, y: jsp.linalg.solve_triangular(X, y, lower=True), (0, 0), 0)(
-        X, y
-    )
+def batched_solve(X, y):
+    return jsp.linalg.solve(X, y)
 
+    
+@jit
+def batched_solve_lower_triangular(L: ArrayLike, y: ArrayLike) -> ArrayLike:
+    return jsp.linalg.solve_triangular(L, y, lower=True)
+    
 
 @jit
-def batched_solve_trans_lower_triangular(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return vmap(
-        lambda X, y: jsp.linalg.solve_triangular(X, y, trans="T", lower=True), (0, 0), 0
-    )(X, y)
+def batched_solve_trans_lower_triangular(L: ArrayLike, z: ArrayLike) -> ArrayLike:
+    return jsp.linalg.solve_triangular(L, z, trans="T", lower=True)
 
 
 class LinearSolver(object, metaclass=abc.ABCMeta):
@@ -340,24 +350,19 @@ class CholeskySolver(LinearSolver):
     def __call__(
         self, X: "np.ndarray[(1, 1), np.floating]", y: "np.ndarray[(1,), np.floating]"
     ):
+        # Add machine eps to avoid zeros in matrix and increase numerical stability
         if isinstance(X, jax.Array):
-            # L = Cholesky(X)
-            # Add machine eps to avoid zeros in matrix and increase numerical stability
-            L = jnp.linalg.cholesky(X + np.finfo(X.dtype).eps)
-            # solve Lz = y
-            z = jsp.linalg.solve_triangular(L, y, lower=True)
-            # solve Lt beta = z
-            return jsp.linalg.solve_triangular(L, z, trans="T", lower=True)
+            return _cholesky_solver(X + np.finfo(X.dtype).eps, y)
+
         elif isinstance(X, (np.ndarray, np.generic)):
-            # Add machine eps to avoid zeros in matrix and increase numerical stability
             c, low = slinalg.cho_factor(X + np.finfo(X.dtype).eps)
             return slinalg.cho_solve((c, low), y)
+
         elif isinstance(X, block.BlockDiagonalMatrix):
             start = 0
             res = np.empty(X.shape[0])
             for A in X:
                 d = A.shape[1]
-                # Add machine eps to avoid zeros in matrix and increase numerical stability
                 c, low = slinalg.cho_factor(A + np.finfo(A.dtype).eps)
                 x = slinalg.cho_solve((c, low), y.view()[start : start + d])
                 res.view()[start : start + d] = x
@@ -367,21 +372,28 @@ class CholeskySolver(LinearSolver):
             raise Exception(f"CholeskySolver doesn't support matrix of type {type(X)}")
 
 
+@jit
+def _cholesky_solver(X: ArrayLike, y:ArrayLike) -> ArrayLike:
+    L = batched_cholesky(X)
+    z = batched_solve_lower_triangular(L, y)
+    return batched_solve_trans_lower_triangular(L, z)
+
+@jit
+def _qr_solver(X, y):
+    Q, R = jnp.linalg.qr(X)
+    return jsp.linalg.solve(R, batched_mvdot(Q, y), lower=False)
+    
+    
 class BatchedCholeskySolver(LinearSolver):
     def __init__(self) -> None:
         super().__init__()
 
     def __call__(
         self,
-        X: "np.ndarray[(1, 1, 1), np.floating]",
-        y: "np.ndarray[(1, 1), np.floating]",
-    ):
-        # L = Cholesky(X)
-        L = batched_cholesky(X)
-        # solve Lz = y
-        z = batched_solve_lower_triangular(L, y)
-        # solve Lt beta = z
-        return batched_solve_trans_lower_triangular(L, z)
+        X: ArrayLike,
+        y: ArrayLike,
+    ) -> ArrayLike:
+        return _cholesky_solver(X, y)
 
 
 class QRSolver(LinearSolver):
@@ -395,6 +407,14 @@ class QRSolver(LinearSolver):
         Q, R = jnp.linalg.qr(X)
         # solve R beta = Qty
         return jsp.linalg.solve(R, mvdot(Q, y), lower=False)
+
+
+class BatchedQRSolver(LinearSolver):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def __call__(self, X, y):
+        return _qr_solver(X, y)
 
 
 @jit
@@ -426,6 +446,12 @@ def randn(n, m, seed=42):
     return jrand.normal(key=jrand.PRNGKey(seed), shape=(n, m))
 
 
+@jit
+def _compute_delta(curr, prev, col):
+    return jnp.abs(
+        jnp.sum(jnp.dot(jnp.transpose(curr[:, col]), prev[:, col]))
+    )
+
 def check_eigenvector_convergence(current, previous, tolerance, required=None):
     """
     This function checks whether two sets of vectors are assymptotically collinear,
@@ -449,9 +475,7 @@ def check_eigenvector_convergence(current, previous, tolerance, required=None):
     while col < current.shape[1] and not converged:
         # check if the scalar product of the current and the previous eigenvectors
         # is 1, which means the vectors are 'parallel'
-        delta = jnp.abs(
-            jnp.sum(jnp.dot(jnp.transpose(current[:, col]), previous[:, col]))
-        )
+        delta = _compute_delta(current, previous, col)
         deltas.append(delta)
         if delta >= 1 - tolerance:
             nr_converged = nr_converged + 1
@@ -460,7 +484,7 @@ def check_eigenvector_convergence(current, previous, tolerance, required=None):
         col = col + 1
     return converged, deltas
 
-
+@jit
 def update_Us(U, Us, current_iteration):
     Us.append(U)
     return U, Us, current_iteration + 1
@@ -482,7 +506,7 @@ def init_rand_U(m, k1):
     prev_U = randn(m, k1)
     return prev_U
 
-
+@jit
 def update_local_U(A, V):
     """Update U matrix in edge
 
@@ -499,6 +523,7 @@ def update_local_U(A, V):
     return U
 
 
+@jit
 def orthonormalize(M):
     """Orthonormalize matrix in aggregator
 
@@ -516,7 +541,7 @@ def orthonormalize(M):
     S = abs(jnp.diag(S))
     return M, S
 
-
+@jit
 def update_local_V(A, U):
     """Update V matrix in edge
 
@@ -532,7 +557,7 @@ def update_local_V(A, U):
     V = mmdot(A, U)
     return V
 
-
+@jit
 def decompose_U_stack(Us):
     """Stack U matrices from I iterations and decompose it
 
@@ -551,7 +576,7 @@ def decompose_U_stack(Us):
     U, _, _ = svd(Us)
     return U
 
-
+@jit
 def create_proxy_matrix(A, U):
     """Calculate proxy matrix P
 
@@ -570,7 +595,7 @@ def create_proxy_matrix(A, U):
     P = mmdot(U, A)
     return P
 
-
+@jit
 def covariance_from_proxy_matrix(P):
     """Calculate covariance matrix from proxy matrix
 
@@ -586,7 +611,7 @@ def covariance_from_proxy_matrix(P):
     cov = mmdot(P.T, P.T)
     return cov
 
-
+@jit
 def local_V_from_proxy_matrix(P, Vp):
     """Update V matrix
 

@@ -1,8 +1,7 @@
 from abc import ABCMeta
 import logging
 import os
-from itertools import repeat
-from multiprocessing import Pool
+from functools import partial
 from typing import List, Literal
 
 import numpy as np
@@ -20,9 +19,7 @@ from matplotlib.cm import Accent
 
 from .fedalgo import gwasprs
 from .fedalgo.gwasprs import gwasplot
-from .fedalgo.gwasprs.array import ArrayIterator
 from .fedalgo import survival
-from .utils import flatten
 
 
 class UseCase(metaclass=ABCMeta):
@@ -363,6 +360,8 @@ class CovarProcessor(UseCase):
 
 
         if cov is not None:
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
             cov_path = os.path.join(save_dir,'stdz.merged.cov')
             cov.to_csv(f"{cov_path}", sep='\t', index=None)
             return cov_path
@@ -371,44 +370,25 @@ class CovarProcessor(UseCase):
             return None
 
 
-def add_bias_and_dropna(covariates, phenotype, genotype):
-    logging.info("Adding bias (inner).")
-    Xs = gwasprs.block.BlockDiagonalMatrix([])
-    ys = []
-    for g in ArrayIterator(genotype, axis=1):
-        X = gwasprs.regression.add_bias(g, axis=1)
-        X = gwasprs.array.concat((X, covariates))
-        idx = np.logical_and(
-            gwasprs.mask.isnonnan(X, axis=1),
-            gwasprs.mask.isnonnan(np.expand_dims(phenotype, -1), axis=1),
-        )
-        Xs.append(X[idx])
-        ys.append(phenotype[idx])
-    logging.info("Adding bias done (inner).")
-    return Xs, np.concatenate(ys)
+@partial(jit, static_argnames=["binarize"])
+def preprocess_x_y(genotype, covariates, phenotype, binarize=False):
+    genotype = jnp.expand_dims(genotype, axis=-1)
+    X = jnp.concatenate((genotype, covariates), axis=1)
+    mask = jnp.expand_dims(gwasprs.mask.isnonnan(X, axis=1), -1)
+    X_mask = gwasprs.impute_with(X) * mask
+    Y_mask = phenotype * jnp.squeeze(mask)
+
+    # Set the max value to 1, else to 0
+    if binarize:
+        max_value = jnp.max(Y_mask)
+        Y_mask = jnp.where(Y_mask == max_value, 1, 0)
+
+    return X_mask, Y_mask
 
 
-def calculate_covariances(genotype, covariates, phenotype):
-    logging.info("Calculating covariances (inner).")
-    X, y = add_bias_and_dropna(covariates, phenotype, genotype)
-    XtX = gwasprs.stats.blocked_unnorm_autocovariance(X)
-    Xty = gwasprs.stats.blocked_unnorm_covariance(X, y)
-    return XtX, Xty
-
-
-def calculate_sse(genotype, covariates, phenotype, beta):
-    logging.info("Calculating SSE (inner).")
-    sse, n_obs = [], []
-    beta = beta.view().reshape(
-        -1,
-    )
-    X, y = add_bias_and_dropna(covariates, phenotype, genotype)
-    n_obs = np.array([sh[0] for sh in X.blockshapes])
-    client_model = gwasprs.regression.BlockedLinearRegression(
-        beta=beta, nmodels=X.nblocks
-    )
-    sse = client_model.sse(X, y)
-    return sse, n_obs
+@partial(jit, static_argnames=["binarize"])
+def generate_Xy(GT, covariates, phenotype, binarize=False):
+    return vmap(preprocess_x_y, (1, None, None, None), (0, 0))(GT, covariates, phenotype, binarize)
 
 
 class QuantitativeGWAS(UseCase):
@@ -505,12 +485,10 @@ class QuantitativeGWAS(UseCase):
         snp_info = chunk_data.snp
 
         return genotype, covariates, phenotype, sample_info, snp_info
-
-    def local_calculate_covariances(
-        self, genotype, covariates, phenotype, block_size, nprocess
-    ):
+    
+    def local_calculate_covariances(self, genotype, covariates, phenotype):
         """
-        Calculate block diagonal (auto)covariance matrix
+        Calculate (auto)covariance matrix
 
         The shape of X matrix is (n_SNP, n_sample, 1(SNP)+n_covariate+1(bias)),
         however, the number of samples for each SNP may vary
@@ -524,55 +502,41 @@ class QuantitativeGWAS(UseCase):
             Covariate matrix in shape (n_sample, n_covariate).
         phenotype : np.array
             Phenotype vector in shape (n_sample,).
-        block_size : int
-            Number of SNPs to run in a block in a process.
-        nprocess : int
-            Number of processes to run the task.
 
         Returns
         -------
         XtX : np.array
-            Block diagonal covariance matrix
-            in shape (n_SNP*(n_covariate+2), n_SNP*(n_covariate+2)).
+            Covariacne matrix in shape (n_SNP, n_covariate+2, n_covariate+2).
         Xty : np.array
-            Vector in shape (n_SNP*(n_covariate+2), 1).
+            Matrix in shape (n_SNP, n_covariate+2).
         """
         logging.info("Calculating (auto)covariance matrix.")
-        n_SNP = genotype.shape[1]
-        split_idx = [
-            min(start + block_size, n_SNP) for start in range(0, n_SNP, block_size)
-        ]
-        genotype = np.split(genotype, split_idx, axis=1)[:-1]
-        num_blocks = len(genotype)
-        pool = Pool(nprocess)
-        results = pool.starmap(
-            calculate_covariances,
-            zip(
-                genotype, repeat(covariates, num_blocks), repeat(phenotype, num_blocks)
-            ),
-        )
-        pool.close()
-        pool.join()
-        XtX, Xty = list(zip(*results))
+        if covariates is None:
+            covariates = jnp.ones((genotype.shape[0], 1))
+        else:
+            covariates = jnp.array(gwasprs.regression.add_bias(covariates))
+        self.X, self.y = generate_Xy(genotype, covariates, phenotype)
 
-        return flatten.list_of_blocks(XtX), np.concatenate(Xty), n_SNP
+        XtX = gwasprs.stats.batched_unnorm_autocovariance(self.X)
+        Xty = gwasprs.stats.batched_unnorm_covariance(self.X, self.y)
 
-    def global_fit_model(self, XtX, Xty, n_model, **kwargs):
+        return XtX, Xty
+    
+    def global_fit_model(self, XtX, Xty):
         """
         Fit the linear regression model
 
         Parameters
         ----------
-        XtX : list of np.array
-            Block diagonal covariance matrix in shape
-            (n_SNP*(n_covariate+2), n_SNP*(n_covariate+2)) from edges.
-        Xty : list of np.array
-            Vector in shape (n_SNP*(n_covariate+2), 1) from edges.
+        XtX : np.array
+            Covariacne matrix in shape (n_SNP, n_covariate+2, n_covariate+2) from edges.
+        Xty : np.array
+            Matrix in shape (n_SNP, n_covariate+2) from edges.
 
         Returns
         -------
         beta : np.array
-            Coefficients in shape (n_SNP*(n_covariate+2), 1).
+            Coefficients in shape (n_SNP, n_covariate+2).
         """
         logging.info("Fitting linear regression model.")
         if isinstance(XtX, list) and isinstance(Xty, list):
@@ -582,15 +546,13 @@ class QuantitativeGWAS(UseCase):
         if issparse(XtX):
             XtX = XtX.todense()
 
-        self.server_model = gwasprs.regression.BlockedLinearRegression(
-            XtX=XtX, Xty=Xty, nmodels=n_model
-        )
+        self.server_model = gwasprs.regression.BatchedLinearRegression(XtX=XtX, Xty=Xty)
         beta = self.server_model.coef
         self.XtX = XtX
         return beta
 
     def local_sse_and_obs(
-        self, beta, phenotype, genotype, covariates, block_size, nprocess
+        self, beta, phenotype, genotype, covariates
     ):
         """
         Calculate sum of square error and number of observations
@@ -598,7 +560,7 @@ class QuantitativeGWAS(UseCase):
         Parameters
         ----------
         beta : np.array
-            Coefficients in shape (n_SNP*(n_covariate+2), 1).
+            Coefficients in shape (n_SNP, n_covariate+2).
         phenotype : np.array
             Phenotype vector in shape (n_sample,).
         genotype : np.array
@@ -609,36 +571,27 @@ class QuantitativeGWAS(UseCase):
         Returns
         -------
         sse : np.array
-            Sum of square error in shape (n_SNP*(n_covariate+2),).
+            Sum of square error in shape (n_SNP,).
         n_obs : np.array
             Number of observations in shape (n_SNP,).
         """
         logging.info("Calculating SSE and number of observations.")
-        n_SNP = genotype.shape[1]
-        split_idx = [
-            min(start + block_size, n_SNP) for start in range(0, n_SNP, block_size)
-        ]
-        genotype = np.split(genotype, split_idx, axis=1)[:-1]
-        beta = beta.view().reshape(n_SNP, -1)
-        beta = np.split(beta, split_idx, axis=0)[:-1]
-        num_blocks = len(genotype)
-        pool = Pool(nprocess)
-        results = pool.starmap(
-            calculate_sse,
-            zip(
-                genotype,
-                repeat(covariates, num_blocks),
-                repeat(phenotype, num_blocks),
-                beta,
-            ),
-        )
-        pool.close()
-        pool.join()
-        sse, n_obs = list(zip(*results))
+        if self.X is None and self.y is None:
+            if covariates is None:
+                covariates = jnp.ones((genotype.shape[0], 1))
+            else:
+                covariates = jnp.array(gwasprs.regression.add_bias(covariates))
+            self.X, self.y = generate_Xy(genotype, covariates, phenotype)
 
-        return flatten.list_of_arrays(sse, axis=0), flatten.list_of_arrays(
-            n_obs, axis=0
-        )
+        n_obs = gwasprs.nonnan_count(genotype)
+
+        client_model = gwasprs.regression.BatchedLinearRegression(beta=beta)
+        sse = client_model.sse(self.X, self.y)
+
+        self.X = None
+        self.y = None
+
+        return sse, n_obs
 
     def global_stats(self, sse, n_obs):
         """
@@ -647,7 +600,7 @@ class QuantitativeGWAS(UseCase):
         Parameters
         ----------
         sse : list of np.array
-            Sum of square error in shape (n_SNP*(n_covariate+2),).
+            Sum of square error in shape (n_SNP,).
         n_obs : list of np.array
             Number of observations in shape (n_SNP,).
 
@@ -665,10 +618,10 @@ class QuantitativeGWAS(UseCase):
 
         dof = self.server_model.dof(n_obs)
         t_stat = self.server_model.t_stats(sse, self.XtX, dof)
-        t_stat = np.reshape(t_stat, (dof.shape[0], -1))
+        t_stat = jnp.reshape(t_stat, (dof.shape[0], -1))
 
         logging.info("Calculating p values for t statistics.")
-        pval = gwasprs.stats.t_dist_pvalue(t_stat, np.expand_dims(dof, -1))
+        pval = gwasprs.stats.t_dist_pvalue(t_stat, jnp.expand_dims(dof, -1))
         return t_stat, pval
 
 
@@ -798,29 +751,6 @@ class LinearRegression(UseCase):
         return t_stat, pval
 
 
-""" Logistic Helper Functions """
-
-
-@jit
-def preprocess_x_y(genotype, covariates, phenotype):
-    genotype = jnp.expand_dims(genotype, axis=-1)
-    X = jnp.concatenate((genotype, covariates), axis=1)
-    mask = jnp.expand_dims(gwasprs.mask.isnonnan(X, axis=1), -1)
-    X_mask = gwasprs.impute_with(X) * mask
-    Y_mask = phenotype * jnp.squeeze(mask)
-
-    # Set the max value to 1, else to 0
-    max_value = jnp.max(Y_mask)
-    Y_mask = jnp.where(Y_mask == max_value, 1, 0)
-
-    return X_mask, Y_mask
-
-
-@jit
-def generate_Xy(GT, covariates, phenotype):
-    return vmap(preprocess_x_y, (1, None, None), (0, 0))(GT, covariates, phenotype)
-
-
 def converged(prev_loglikelihood, loglikelihood, threshold=1e-4):
     if jnp.isnan(prev_loglikelihood).all():
         return False
@@ -840,6 +770,9 @@ class BinaryGWAS(UseCase):
     This work is inspired by the work of sPLINK,
     see https://github.com/tum-aimed/splink.
     """
+    
+    X = None
+    y = None
 
     def __init__(self):
         super().__init__()
@@ -972,16 +905,13 @@ class BinaryGWAS(UseCase):
             covariates = jnp.ones((genotype.shape[0], 1))
         else:
             covariates = jnp.array(gwasprs.regression.add_bias(covariates))
-        X, y = generate_Xy(genotype, covariates, phenotype)
+        self.X, self.y = generate_Xy(genotype, covariates, phenotype, True)
         beta = jnp.zeros((genotype.shape[1], covariates.shape[1] + 1))
         n_obs = gwasprs.mask.nonnan_count(genotype)  # used in output file
         current_iteration = 0
 
         # Update the parameters
-        model = gwasprs.regression.BatchedLogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = gwasprs.regression.BatchedLogisticRegression.update(beta, self.X, self.y)
         current_iteration += 1
         return n_obs, gradient, hessian, loglikelihood, current_iteration
 
@@ -1067,19 +997,15 @@ class BinaryGWAS(UseCase):
         return beta, prev_beta, prev_loglikelihood, inv_hessian, jump_to
 
     def local_iter_params(
-        self, genotype, covariates, phenotype, beta, current_iteration
+        self,
+        beta, 
+        current_iteration
     ):
         """
         Update local parameters from global beta
 
         Parameters
         ----------
-        genotype : np.array
-            Genotype matrix in shape (n_sample, n_SNP).
-        covariates : np.array
-            Covariate matrix in shape (n_sample, n_covariate).
-        phenotype : np.array
-            Phenotype vector in shape (n_sample,).
         beta : np.array
             Global beta matrix in shape (n_SNP, n_covariate+2).
         current_iteration : int
@@ -1098,17 +1024,8 @@ class BinaryGWAS(UseCase):
         jump_to : str
             'global_params' to update global parameters.
         """
-        if covariates is None:
-            covariates = jnp.ones((genotype.shape[0], 1))
-        else:
-            covariates = jnp.array(gwasprs.regression.add_bias(covariates))
-        X, y = generate_Xy(genotype, covariates, phenotype)
-
         # Update the parameters
-        model = gwasprs.regression.BatchedLogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = gwasprs.regression.BatchedLogisticRegression.update(beta, self.X, self.y)
         current_iteration += 1
         jump_to = "global_params"
         return gradient, hessian, loglikelihood, current_iteration, jump_to
@@ -1133,8 +1050,6 @@ class BinaryGWAS(UseCase):
         beta : np.array
             Global beta vector in shape (n_SNP,).
         """
-        beta = beta.astype('float64')
-        inv_hessian = inv_hessian.astype('float64')
         t_stat, pval = gwasprs.stats.batched_logistic_stats(beta, inv_hessian)
         return t_stat[:, 0], pval[:, 0], beta[:, 0]
 
@@ -1228,10 +1143,7 @@ class LogisticRegression(UseCase):
 
         # Initialize logistic regression
         beta = np.zeros((X.shape[1],))
-        model = gwasprs.regression.LogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = gwasprs.regression.LogisticRegression.update(beta, X, y)
         current_iteration = 1
 
         return X, y, gradient, hessian, loglikelihood, current_iteration
@@ -1340,10 +1252,7 @@ class LogisticRegression(UseCase):
         jump_to : str
             'global_params' to update global parameters.
         """
-        model = gwasprs.regression.LogisticRegression(beta)
-        gradient = model.gradient(X, y)
-        hessian = model.hessian(X)
-        loglikelihood = model.loglikelihood(X, y)
+        gradient, hessian, loglikelihood = gwasprs.regression.LogisticRegression.update(beta, X, y)
         current_iteration += 1
         jump_to = "global_params"
         return gradient, hessian, loglikelihood, current_iteration, jump_to
@@ -1844,6 +1753,13 @@ class RandomizedSVD(UseCase):
         """
         U = gwasprs.linalg.decompose_U_stack(Us)
         return U
+    
+    @staticmethod
+    @jit
+    def _compute_local_covariance(A, U):
+        P = gwasprs.linalg.create_proxy_matrix(A, U)
+        PPt = gwasprs.linalg.covariance_from_proxy_matrix(P)
+        return P, PPt
 
     def compute_local_covariance(self, A, U):
         """
@@ -1864,9 +1780,7 @@ class RandomizedSVD(UseCase):
         PPt : np.array
             The proxy covariance matrix in shape (k1*I, k1*I).
         """
-        P = gwasprs.linalg.create_proxy_matrix(A, U)
-        PPt = gwasprs.linalg.covariance_from_proxy_matrix(P)
-        return P, PPt
+        return self._compute_local_covariance(A, U)
 
     def decompose_global_covariance(self, PPt, k2):
         """
@@ -2877,8 +2791,8 @@ class Output(UseCase):
         if not os.path.exists(cox_save_dir):
             os.makedirs(cox_save_dir)
 
-        stats_summary = stats_summary.sort_values("coef")
         stats_summary.to_csv(os.path.join(cox_save_dir, "rafael.cox.stats.summary.csv"))
+        stats_summary = stats_summary.sort_values("coef")
 
         plt.figure(figsize=(8, 6))
 
@@ -3141,3 +3055,42 @@ class NaiveLDPruning(UseCase):
         """
         out_path = gwasprs.ld.extract_snps(bfile_path, out_path, snp_list)
         return out_path
+
+
+class SfkitLDFiltering(NaiveLDPruning):
+    def local_ldprune(
+        self,
+        bfile_path: str,
+        win_size: int = 100000,
+        **kwargs
+    ) -> NDArray:
+        """
+        Run LD prune by plink2
+
+        Parameters
+        ----------
+        bfile_path : str
+            input bfile prefix
+        win_size: int
+            the LD distance threshold in sfkit
+
+        Returns
+        -------
+        snp_list : list
+            The list of snp ids after ld purne.
+        """
+        bim = gwasprs.gwasdata.BimReader(bfile_path).read()
+        snp_list = []
+        prev_pos = 0
+        prev_chrom = None
+        for chrom, snp, pos in zip(bim["CHR"], bim["ID"], bim["POS"]):
+            if prev_chrom is None:
+                prev_chrom = chrom
+            elif prev_chrom != chrom:
+                prev_chrom = chrom
+                prev_pos = 0
+            if prev_pos == 0 or pos >= prev_pos + win_size:
+                snp_list.append(snp)
+                prev_pos = pos
+        return np.array(snp_list)
+    
